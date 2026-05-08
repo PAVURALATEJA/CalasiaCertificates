@@ -102,23 +102,116 @@ def db_execute_returning(sql, params=None):
 
 
 def create_tables():
-    """Ensure all core tables exist before any route is hit."""
+    """Create ALL tables on startup so no route ever hits a missing-table error."""
     conn = get_db()
     cur = conn.cursor()
     try:
+        # 1. customers (no FK deps)
         cur.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            username VARCHAR(100) UNIQUE NOT NULL,
-            password_hash VARCHAR(255) NOT NULL,
-            full_name VARCHAR(200) DEFAULT '',
-            role VARCHAR(50) DEFAULT 'customer',
-            customer_id INTEGER,
-            email VARCHAR(200),
-            is_active BOOLEAN DEFAULT TRUE
+        CREATE TABLE IF NOT EXISTS customers (
+            id             SERIAL PRIMARY KEY,
+            company_name   VARCHAR(200) NOT NULL,
+            contact_person VARCHAR(100),
+            email          VARCHAR(100),
+            phone          VARCHAR(30),
+            address        TEXT,
+            is_active      BOOLEAN DEFAULT TRUE,
+            created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
+
+        # 2. users (FK → customers)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id            SERIAL PRIMARY KEY,
+            username      VARCHAR(100) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            full_name     VARCHAR(200) DEFAULT '',
+            role          VARCHAR(50)  DEFAULT 'customer',
+            customer_id   INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+            email         VARCHAR(200),
+            is_active     BOOLEAN DEFAULT TRUE,
+            created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 3. instruments (FK → customers)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS instruments (
+            id              SERIAL PRIMARY KEY,
+            customer_id     INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+            instrument_name VARCHAR(200) NOT NULL,
+            serial_number   VARCHAR(100) UNIQUE NOT NULL,
+            model           VARCHAR(100),
+            manufacturer    VARCHAR(100),
+            location        VARCHAR(200),
+            asset_number    VARCHAR(100),
+            created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 4. certificates (FK → instruments)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS certificates (
+            id                  SERIAL PRIMARY KEY,
+            instrument_id       INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
+            certificate_number  VARCHAR(100) UNIQUE NOT NULL,
+            calibration_date    DATE NOT NULL,
+            due_date            DATE NOT NULL,
+            dropbox_file_path   VARCHAR(500),
+            dropbox_shared_link VARCHAR(1000),
+            source              VARCHAR(20) DEFAULT 'manual',
+            notes               TEXT,
+            created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 5. sync_logs (no FK deps)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS sync_logs (
+            id              SERIAL PRIMARY KEY,
+            total_files     INTEGER DEFAULT 0,
+            success_count   INTEGER DEFAULT 0,
+            duplicate_count INTEGER DEFAULT 0,
+            unmatched_count INTEGER DEFAULT 0,
+            error_count     INTEGER DEFAULT 0,
+            triggered_by    VARCHAR(50) DEFAULT 'scheduler',
+            message         TEXT,
+            synced_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 6. unmatched_files (no FK deps)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS unmatched_files (
+            id            SERIAL PRIMARY KEY,
+            file_name     VARCHAR(500) NOT NULL,
+            dropbox_path  VARCHAR(1000),
+            serial_number VARCHAR(100),
+            reason        TEXT,
+            resolved      BOOLEAN DEFAULT FALSE,
+            detected_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # 7. duplicate_files (no FK deps)
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS duplicate_files (
+            id                 SERIAL PRIMARY KEY,
+            file_name          VARCHAR(500) NOT NULL,
+            dropbox_path       VARCHAR(1000),
+            certificate_number VARCHAR(100),
+            reason             TEXT,
+            resolved           BOOLEAN DEFAULT FALSE,
+            detected_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
         conn.commit()
+        print("[STARTUP] All tables verified/created successfully.")
+    except Exception as e:
+        print(f"[STARTUP] create_tables error: {e}")
+        conn.rollback()
     finally:
         cur.close()
         conn.close()
