@@ -100,6 +100,31 @@ def db_execute_returning(sql, params=None):
     finally:
         conn.close()
 
+
+def create_tables():
+    """Ensure all core tables exist before any route is hit."""
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(100) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            full_name VARCHAR(200) DEFAULT '',
+            role VARCHAR(50) DEFAULT 'customer',
+            customer_id INTEGER,
+            email VARCHAR(200),
+            is_active BOOLEAN DEFAULT TRUE
+        )
+        """)
+        conn.commit()
+    finally:
+        cur.close()
+        conn.close()
+
+create_tables()
+
 # =============================================================================
 # AUTH
 # =============================================================================
