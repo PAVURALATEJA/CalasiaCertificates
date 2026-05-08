@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Manager Dashboard — Cal-Asia{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start">
+  <div>
+    <h1 class="page-title"><i class="bi bi-speedometer2 me-2" style="color:#22d3ee;"></i>Calibration Manager Dashboard</h1>
+    <p class="page-sub">Welcome, {{ current_user.full_name }} — Manage Dropbox PDF uploads and sync.</p>
+  </div>
+  <a href="{{ url_for('sync_report') }}" class="btn"
+     style="background:linear-gradient(135deg,#22d3ee,#0891b2);color:#fff;font-weight:600;border:none;">
+    <i class="bi bi-cloud-arrow-down me-1"></i>Sync Dropbox Now
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="stat-card green">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="stat-num">{{ total_certs }}</div>
+      <div class="stat-label">Total Certificates in System</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="stat-num">{{ unmatched_count }}</div>
+      <div class="stat-label">Unmatched Files (need attention)</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stat-card cyan">
+      <div class="stat-icon stat-icon-cyan"><i class="bi bi-clock"></i></div>
+      <div class="stat-num">
+        {% if last_sync %}{{ last_sync.synced_at.strftime('%H:%M') }}{% else %}—{% endif %}
+      </div>
+      <div class="stat-label">Last Sync Time</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dropbox Upload Guide -->
+<div class="card-glass mb-4">
+  <h6 style="font-weight:600;margin-bottom:14px;color:#22d3ee;"><i class="bi bi-cloud-upload me-2"></i>How to Upload Certificates via Dropbox</h6>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <div style="background:#0f1629;padding:16px;border-radius:10px;height:100%;">
+        <div style="font-weight:600;margin-bottom:8px;">① Upload the PDF to Dropbox</div>
+        <ul style="color:#8892a4;font-size:13px;padding-left:18px;margin:0;">
+          <li>Go to your Dropbox folder: <code style="color:#f97316;">/Calibration_Certificates/</code></li>
+          <li>Upload the calibration PDF from any device (PC, phone, web)</li>
+          <li>The system automatically syncs every <b style="color:#10b981;">30 minutes</b></li>
+          <li>Or click "Sync Dropbox Now" to sync immediately</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div style="background:#0f1629;padding:16px;border-radius:10px;height:100%;">
+        <div style="font-weight:600;margin-bottom:8px;">② File Naming — CRITICAL</div>
+        <div style="font-size:13px;margin-bottom:8px;">Format: <code style="color:#f97316;font-size:14px;">SERIAL_CERTNUM.pdf</code></div>
+        <div style="font-size:12px;color:#8892a4;">
+          <div>✅ <code style="color:#10b981;">FLK87V-001_CAL2025-001.pdf</code></div>
+          <div>✅ <code style="color:#10b981;">ABC123_CERT-MAY2025.pdf</code></div>
+          <div class="mt-1">❌ <code style="color:#ef4444;">certificate.pdf</code> (no serial/cert)</div>
+          <div>❌ <code style="color:#ef4444;">FLK87V-001.pdf</code> (no cert number)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Last Sync -->
+{% if last_sync %}
+<div class="sync-banner mb-4">
+  <i class="bi bi-cloud-check me-2" style="color:#22d3ee;"></i>
+  <b>Last Sync:</b> {{ last_sync.synced_at.strftime('%d %b %Y at %H:%M') if last_sync.synced_at else '—' }}
+  &nbsp;•&nbsp; ✅ {{ last_sync.success_count }} added
+  &nbsp;•&nbsp; ⚠️ {{ last_sync.unmatched_count }} unmatched
+  &nbsp;•&nbsp; 🔁 {{ last_sync.duplicate_count }} duplicates
+  <a href="{{ url_for('sync_report') }}" style="color:#22d3ee;margin-left:12px;">Full Report →</a>
+</div>
+{% endif %}
+
+<!-- Recent Certificates (last 10) -->
+<div class="card-glass">
+  <h6 style="font-weight:600;margin-bottom:14px;"><i class="bi bi-clock-history me-2" style="color:#8892a4;"></i>Recently Synced Certificates</h6>
+  {% if recent_certs %}
+  <div class="table-responsive">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Certificate No.</th><th>Instrument</th><th>Serial No.</th><th>Customer</th><th>Cal. Date</th><th>Due Date</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for c in recent_certs %}
+        {% set s = cert_status(c.due_date) %}
+        <tr>
+          <td><code style="color:#22d3ee;">{{ c.certificate_number }}</code></td>
+          <td>{{ c.instrument_name }}</td>
+          <td><code style="color:#f97316;font-size:11px;">{{ c.serial_number }}</code></td>
+          <td style="color:#8892a4;">{{ c.company_name }}</td>
+          <td>{{ c.calibration_date|dateformat }}</td>
+          <td>{{ c.due_date|dateformat }}</td>
+          <td><span class="badge-pill badge-{{ s }}">
+            {% if s=='calibrated'%}✅{% elif s=='due_soon'%}⚠️{% else %}🔴{% endif %}
+            {{ s.replace('_',' ').title() }}
+          </span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;color:#8892a4;">
+    <i class="bi bi-cloud-slash" style="font-size:30px;"></i>
+    <p style="margin:8px 0 0;">No certificates yet. Upload PDFs to Dropbox and click Sync.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+{% block title %}Dropbox Sync — Cal-Asia{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-cloud-arrow-down me-2" style="color:#22d3ee;"></i>Dropbox Sync</h1>
+    <p class="page-sub">Sync calibration PDFs from Dropbox into the database automatically.</p>
+  </div>
+  <button type="button" id="syncBtn" class="btn" onclick="triggerSync()"
+          style="background:linear-gradient(135deg,#22d3ee,#0891b2);color:#fff;font-weight:600;padding:10px 22px;border:none;">
+    <i class="bi bi-cloud-arrow-down me-2" id="syncIcon"></i>
+    <span id="syncText">🔄 Sync Now</span>
+  </button>
+</div>
+
+<!-- How it works -->
+<div class="card-glass mb-4" style="border-left:3px solid #22d3ee;">
+  <div style="font-weight:600;margin-bottom:10px;color:#22d3ee;"><i class="bi bi-info-circle me-2"></i>How Dropbox Sync Works</div>
+  <div class="row g-3" style="font-size:13px;">
+    <div class="col-md-3">
+      <div style="color:#8892a4;margin-bottom:4px;">① Calibration Manager</div>
+      <div>Uploads PDF to Dropbox folder <code style="color:#f97316;">/Calibration_Certificates/</code></div>
+    </div>
+    <div class="col-md-3">
+      <div style="color:#8892a4;margin-bottom:4px;">② Naming Rule</div>
+      <div>File must be named <code style="color:#f97316;">SERIAL_CERTNUM.pdf</code><br/>
+        e.g. <code style="color:#10b981;">FLK87V-001_CAL2025-001.pdf</code></div>
+    </div>
+    <div class="col-md-3">
+      <div style="color:#8892a4;margin-bottom:4px;">③ Auto or Manual Sync</div>
+      <div>System auto-syncs every <b>10 minutes</b>, or click "Sync Now"</div>
+    </div>
+    <div class="col-md-3">
+      <div style="color:#8892a4;margin-bottom:4px;">④ Customer Sees It</div>
+      <div>Certificate appears in customer dashboard immediately after sync</div>
+    </div>
+  </div>
+</div>
+
+<!-- Last auto-sync status -->
+{% if last_sync_time %}
+<div class="sync-banner mb-4">
+  <i class="bi bi-clock me-2" style="color:#22d3ee;"></i>
+  Last auto-sync: <b>{{ last_sync_time.strftime('%d %b %Y at %H:%M') }}</b>
+  &nbsp;—&nbsp; Next sync in approximately 10 minutes.
+  {% if current_user.role == 'admin' %}
+  &nbsp;<a href="/sync/debug" target="_blank" style="color:#8892a4;font-size:12px;margin-left:8px;"><i class="bi bi-bug me-1"></i>Debug Matching</a>
+  {% endif %}
+</div>
+{% else %}
+<div class="sync-banner mb-4">
+  <i class="bi bi-clock me-2" style="color:#22d3ee;"></i>
+  Auto-sync runs every <b>10 minutes</b>. No sync has run yet this session.
+  {% if current_user.role == 'admin' %}
+  &nbsp;<a href="/sync/debug" target="_blank" style="color:#8892a4;font-size:12px;margin-left:8px;"><i class="bi bi-bug me-1"></i>Debug Matching</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Live sync progress banner -->
+<div id="syncProgressBanner" style="display:none;" class="sync-banner mb-4">
+  <span class="spinner-border spinner-border-sm me-2" role="status" style="color:#22d3ee;"></span>
+  <b style="color:#22d3ee;">Sync in progress…</b>
+  <span style="color:#8892a4;font-size:13px;margin-left:8px;">Please wait — this may take a moment depending on the number of files.</span>
+</div>
+
+<!-- Result Cards (populated by JS after async sync completes) -->
+<div id="syncResultCards" class="row g-3 mb-4" style="display:none;">
+  <div class="col">
+    <div class="stat-card" style="border-top:3px solid #8892a4;">
+      <div class="stat-icon" style="background:rgba(148,163,184,.15);color:#94a3b8;"><i class="bi bi-files"></i></div>
+      <div class="stat-num" id="res-total">—</div>
+      <div class="stat-label">Total PDFs Found</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card green">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-check-circle"></i></div>
+      <div class="stat-num" id="res-success">—</div>
+      <div class="stat-label">Successfully Added</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card" style="border-top:3px solid #22d3ee;">
+      <div class="stat-icon stat-icon-cyan"><i class="bi bi-arrow-repeat"></i></div>
+      <div class="stat-num" id="res-dup">—</div>
+      <div class="stat-label">Duplicates (Skipped)</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-exclamation-triangle"></i></div>
+      <div class="stat-num" id="res-unmatched">—</div>
+      <div class="stat-label">Unmatched Serial No.</div>
+    </div>
+  </div>
+  <div class="col">
+    <div class="stat-card red">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-x-circle"></i></div>
+      <div class="stat-num" id="res-errors">—</div>
+      <div class="stat-label">Errors</div>
+    </div>
+  </div>
+</div>
+
+<!-- Unmatched Files -->
+{% if unmatched %}
+<div class="card-glass mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" style="margin-bottom:14px;">
+    <h6 style="font-weight:600;margin:0;color:#f59e0b;">
+      <i class="bi bi-exclamation-triangle me-2"></i>Unmatched Files ({{ unmatched|length }})
+      <span style="font-size:11px;font-weight:400;color:#8892a4;margin-left:8px;">Serial number not found in database — assign manually below</span>
+    </h6>
+    {% if current_user.role == 'admin' %}
+    <form method="POST" action="/sync/clear-unmatched"
+          onsubmit="return confirm('Clear all {{ unmatched|length }} unmatched records? They will be re-evaluated on next sync.')">
+      <button type="submit" class="btn btn-sm"
+              style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);font-size:12px;">
+        <i class="bi bi-trash me-1"></i>Clear All Unmatched
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Filename</th><th>Serial Found In Name</th><th>Reason</th><th>Time</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for uf in unmatched %}
+        <tr>
+          <td><code style="color:#f97316;">{{ uf.file_name }}</code></td>
+          <td><code style="color:#f59e0b;">{{ uf.serial_number or '—' }}</code></td>
+          <td style="color:#8892a4;font-size:12px;">{{ uf.reason }}</td>
+          <td style="color:#8892a4;font-size:12px;">{{ uf.detected_at.strftime('%d %b %H:%M') if uf.detected_at else '—' }}</td>
+          <td>
+            {% if current_user.role == 'admin' %}
+            <button class="btn btn-sm" style="background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3);"
+                    onclick="openAssign({{ uf.id }}, '{{ uf.file_name }}')">
+              <i class="bi bi-link-45deg me-1"></i>Assign
+            </button>
+            {% else %}
+            <span style="color:#8892a4;font-size:12px;">Contact admin</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Duplicate Files -->
+{% if duplicates is defined and duplicates %}
+<div class="card-glass mb-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" style="margin-bottom:14px;">
+    <h6 style="font-weight:600;margin:0;color:#22d3ee;">
+      <i class="bi bi-arrow-repeat me-2"></i>Duplicate Files ({{ duplicates|length }})
+      <span style="font-size:11px;font-weight:400;color:#8892a4;margin-left:8px;">Already in database — skipped during sync</span>
+    </h6>
+    {% if current_user.role == 'admin' %}
+    <form method="POST" action="/sync/clear-duplicates"
+          onsubmit="return confirm('Clear all {{ duplicates|length }} duplicate records?')">
+      <button type="submit" class="btn btn-sm"
+              style="background:rgba(34,211,238,.1);color:#22d3ee;border:1px solid rgba(34,211,238,.3);font-size:12px;">
+        <i class="bi bi-trash me-1"></i>Clear All Duplicates
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  <div class="table-responsive">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Filename</th><th>Certificate No.</th><th>Reason</th><th>Time</th></tr>
+      </thead>
+      <tbody>
+        {% for df in duplicates %}
+        <tr>
+          <td><code style="color:#22d3ee;">{{ df.file_name }}</code></td>
+          <td><code style="color:#8892a4;">{{ df.certificate_number or '—' }}</code></td>
+          <td style="color:#8892a4;font-size:12px;">{{ df.reason }}</td>
+          <td style="color:#8892a4;font-size:12px;">{{ df.detected_at.strftime('%d %b %H:%M') if df.detected_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Sync History -->
+<div class="card-glass">
+  <h6 style="font-weight:600;margin-bottom:14px;"><i class="bi bi-clock-history me-2" style="color:#8892a4;"></i>Sync History</h6>
+  {% if sync_logs %}
+  <div class="table-responsive">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Date & Time</th><th>Triggered By</th><th>Total PDFs</th><th>Added</th><th>Duplicates</th><th>Unmatched</th><th>Errors</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for log in sync_logs %}
+        <tr>
+          <td>{{ log.synced_at.strftime('%d %b %Y %H:%M') if log.synced_at else '—' }}</td>
+          <td><span style="color:#22d3ee;">{{ log.triggered_by }}</span></td>
+          <td>{{ log.total_files }}</td>
+          <td style="color:#10b981;"><b>{{ log.success_count }}</b></td>
+          <td style="color:#22d3ee;">{{ log.duplicate_count }}</td>
+          <td style="color:#f59e0b;">{{ log.unmatched_count }}</td>
+          <td style="color:#ef4444;">{{ log.error_count }}</td>
+          <td>
+            {% if log.unmatched_count == 0 and log.error_count == 0 %}
+            <span class="badge-pill badge-calibrated">✅ Clean</span>
+            {% else %}
+            <span class="badge-pill badge-due_soon">⚠️ Issues</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;color:#8892a4;">
+    <i class="bi bi-clock-history" style="font-size:30px;"></i>
+    <p style="margin:8px 0 0;">No sync history yet. Click "Sync Now" above.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Assign Modal (Admin only) -->
+{% if current_user.role == 'admin' %}
+<div class="modal fade" id="assignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="background:#1a2340;border:1px solid #1e2d50;color:#e2e8f0;">
+      <div class="modal-header" style="border-color:#1e2d50;">
+        <h5 class="modal-title"><i class="bi bi-link-45deg me-2"></i>Assign Unmatched File</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="assignForm" action="">
+        <div class="modal-body">
+          <p style="font-size:13px;color:#8892a4;">Assign this PDF to the correct instrument:</p>
+          <div style="background:#0f1629;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-family:monospace;color:#f97316;" id="assignFileName"></div>
+          <div class="mb-3">
+            <label class="form-label">Select Instrument</label>
+            <select name="instrument_id" class="form-select" required id="assignInstrumentSelect">
+              <option value="">— Choose instrument —</option>
+              {% set all_instruments = [] %}
+              {% for log in sync_logs[:1] %}{% endfor %}
+            </select>
+          </div>
+          <div id="instrumentsLoading" style="font-size:12px;color:#8892a4;">Loading instruments...</div>
+        </div>
+        <div class="modal-footer" style="border-color:#1e2d50;">
+          <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-orange">Assign & Create Certificate</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var _pollTimer = null;
+
+function triggerSync() {
+  var btn  = document.getElementById('syncBtn');
+  var icon = document.getElementById('syncIcon');
+  var txt  = document.getElementById('syncText');
+
+  btn.disabled = true;
+  icon.className = 'bi bi-arrow-clockwise me-2';
+  txt.textContent = 'Starting…';
+
+  fetch(window.location.pathname, {
+    method: 'POST',
+    headers: {'X-Requested-With': 'XMLHttpRequest'}
+  })
+  .then(function(r) {
+    if (r.status === 409) {
+      txt.textContent = 'Already running';
+      setTimeout(function(){ btn.disabled = false; txt.textContent = '🔄 Sync Now'; icon.className='bi bi-cloud-arrow-down me-2'; }, 3000);
+      return;
+    }
+    if (r.status === 202) {
+      txt.textContent = 'Syncing…';
+      document.getElementById('syncProgressBanner').style.display = '';
+      pollSyncStatus();
+    }
+  })
+  .catch(function(e) {
+    txt.textContent = 'Error — retry';
+    btn.disabled = false;
+    console.error('Sync trigger failed', e);
+  });
+}
+
+function pollSyncStatus() {
+  _pollTimer = setInterval(function() {
+    fetch('/sync/status')
+      .then(function(r){ return r.json(); })
+      .then(function(data) {
+        if (!data.in_progress) {
+          clearInterval(_pollTimer);
+          document.getElementById('syncProgressBanner').style.display = 'none';
+          var btn  = document.getElementById('syncBtn');
+          var icon = document.getElementById('syncIcon');
+          var txt  = document.getElementById('syncText');
+          btn.disabled = false;
+          icon.className = 'bi bi-cloud-arrow-down me-2';
+          txt.textContent = '🔄 Sync Now';
+
+          if (data.stats) {
+            var s = data.stats;
+            document.getElementById('res-total').textContent     = s.total     || 0;
+            document.getElementById('res-success').textContent   = s.success   || 0;
+            document.getElementById('res-dup').textContent       = s.duplicates|| 0;
+            document.getElementById('res-unmatched').textContent = s.unmatched || 0;
+            document.getElementById('res-errors').textContent    = s.errors    || 0;
+            document.getElementById('syncResultCards').style.display = '';
+          }
+
+          if (data.error) {
+            alert('Sync warning: ' + data.error);
+          }
+
+          // Reload page after 1.5s so sync history table updates
+          setTimeout(function(){ window.location.reload(); }, 1500);
+        }
+      })
+      .catch(function(){ /* silent — keep polling */ });
+  }, 2000);
+}
+
+// If server already has a sync in progress when page loads, start polling immediately
+{% if sync_in_progress is defined and sync_in_progress %}
+document.getElementById('syncProgressBanner').style.display = '';
+document.getElementById('syncBtn').disabled = true;
+pollSyncStatus();
+{% endif %}
+
+{% if current_user.role == 'admin' %}
+var instrumentsData = [];
+
+// Load instruments for the assign modal
+fetch('/admin/instruments-json')
+  .then(r => r.json())
+  .then(data => {
+    instrumentsData = data;
+    var sel = document.getElementById('assignInstrumentSelect');
+    if (sel) {
+      sel.innerHTML = '<option value="">— Choose instrument —</option>';
+      data.forEach(function(i) {
+        sel.innerHTML += '<option value="' + i.id + '">' + i.instrument_name + ' (' + i.serial_number + ') — ' + i.company_name + '</option>';
+      });
+      document.getElementById('instrumentsLoading').style.display = 'none';
+    }
+  }).catch(function(){});
+
+function openAssign(uid, fname) {
+  document.getElementById('assignFileName').textContent = fname;
+  document.getElementById('assignForm').action = '/sync/resolve-unmatched/' + uid;
+  new bootstrap.Modal(document.getElementById('assignModal')).show();
+}
+{% endif %}
+</script>
+{% endblock %}

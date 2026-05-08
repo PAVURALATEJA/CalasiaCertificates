@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — Cal-Asia{% endblock %}
+
+{% block extra_css %}
+<style>
+  .quick-btn {
+    display:flex; align-items:center; gap:8px; padding:10px 18px;
+    border-radius:10px; font-size:13px; font-weight:600; text-decoration:none;
+    transition:.2s; border:1px solid;
+  }
+  .quick-btn:hover { transform:translateY(-1px); }
+  .qb-orange { background:rgba(249,115,22,.15); border-color:rgba(249,115,22,.4); color:#fb923c; }
+  .qb-cyan   { background:rgba(34,211,238,.12); border-color:rgba(34,211,238,.35); color:#67e8f9; }
+  .qb-green  { background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.35); color:#6ee7b7; }
+  .qb-glass  { background:rgba(255,255,255,.05); border-color:var(--border); color:var(--muted); }
+  .qb-glass:hover { color:#fff; }
+
+  .alert-strip {
+    background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.25);
+    border-radius:10px; padding:14px 18px; margin-bottom:16px;
+  }
+  .expiry-row { display:flex; align-items:center; gap:10px; padding:6px 0; border-bottom:1px solid rgba(239,68,68,.12); }
+  .expiry-row:last-child { border-bottom:none; padding-bottom:0; }
+  .pulse-dot { width:8px;height:8px;border-radius:50%;background:#10b981;
+               box-shadow:0 0 0 0 rgba(16,185,129,.6);
+               animation:pulse-anim 2s infinite; }
+  @keyframes pulse-anim { 0%{box-shadow:0 0 0 0 rgba(16,185,129,.5);} 70%{box-shadow:0 0 0 8px rgba(16,185,129,0);} 100%{box-shadow:0 0 0 0 rgba(16,185,129,0);} }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-speedometer2 me-2" style="color:#f97316;"></i>Admin Dashboard</h1>
+    <p class="page-sub">System overview — {{ now.strftime('%d %B %Y, %H:%M') if now else '' }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('sync_report') }}" class="quick-btn qb-cyan">
+      <i class="bi bi-cloud-arrow-down"></i> Dropbox Sync
+    </a>
+  </div>
+</div>
+
+<!-- ===== Stats Row ===== -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card orange">
+      <div class="stat-icon stat-icon-orange"><i class="bi bi-building"></i></div>
+      <div class="stat-num">{{ stats.customers }}</div>
+      <div class="stat-label">Customers</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card cyan">
+      <div class="stat-icon stat-icon-cyan"><i class="bi bi-cpu"></i></div>
+      <div class="stat-num">{{ stats.instruments }}</div>
+      <div class="stat-label">Instruments</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card green">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="stat-num">{{ stats.certificates }}</div>
+      <div class="stat-label">Certificates</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-person-badge"></i></div>
+      <div class="stat-num">{{ stats.managers }}</div>
+      <div class="stat-label">Cal. Managers</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card red">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-exclamation-octagon"></i></div>
+      <div class="stat-num">{{ stats.overdue }}</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3 col-xl-2">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-hourglass-split"></i></div>
+      <div class="stat-num">{{ stats.pending_pdfs }}</div>
+      <div class="stat-label">Pending PDFs</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Sync Banner ===== -->
+{% if last_sync %}
+<div class="sync-banner mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span class="pulse-dot"></span>
+    <span>
+      <b>Last Sync:</b>
+      {{ last_sync.synced_at.strftime('%d %b %Y, %H:%M') if last_sync.synced_at else 'Never' }}
+      — by <span style="color:#22d3ee;">{{ last_sync.triggered_by }}</span>
+      &nbsp;|&nbsp;
+      <span style="color:#10b981;">✅ {{ last_sync.success_count }} added</span> &nbsp;
+      <span style="color:#f59e0b;">⚠️ {{ last_sync.unmatched_count }} unmatched</span> &nbsp;
+      <span style="color:#8892a4;">🔁 {{ last_sync.duplicate_count }} duplicates</span>
+    </span>
+  </div>
+  <a href="{{ url_for('sync_report') }}" class="btn btn-sm btn-glass"><i class="bi bi-arrow-right me-1"></i>View Report</a>
+</div>
+{% else %}
+<div class="sync-banner mb-4">
+  <i class="bi bi-cloud-slash me-2" style="color:#f59e0b;"></i>
+  No sync has been run yet.
+  <a href="{{ url_for('sync_report') }}" style="color:#22d3ee;margin-left:8px;">Run sync now →</a>
+</div>
+{% endif %}
+
+<!-- ===== Expiring Soon Alert ===== -->
+{% if expiring_soon %}
+<div class="alert-strip mb-4">
+  <div style="font-weight:700;color:#fca5a5;margin-bottom:10px;">
+    <i class="bi bi-alarm me-2"></i>{{ expiring_soon|length }} instrument(s) need recalibration soon
+  </div>
+  {% for e in expiring_soon[:6] %}
+  <div class="expiry-row">
+    <span style="font-weight:600;color:var(--text);min-width:150px;">{{ e.company_name }}</span>
+    <code style="color:#f97316;font-size:11px;">{{ e.serial_number }}</code>
+    <span style="color:var(--muted);font-size:12px;">{{ e.asset_number or e.instrument_name }}</span>
+    <span style="margin-left:auto;font-size:12px;color:{{ '#fca5a5' if e.days_left < 0 else '#fcd34d' }};font-weight:600;">
+      {% if e.days_left < 0 %}{{ e.days_left|abs }} days overdue{% else %}{{ e.days_left }} days left{% endif %}
+    </span>
+  </div>
+  {% endfor %}
+  {% if expiring_soon|length > 6 %}
+  <div style="margin-top:8px;font-size:12px;color:var(--muted);">
+    …and {{ expiring_soon|length - 6 }} more.
+    <a href="{{ url_for('admin_instruments') }}" style="color:#22d3ee;">View all instruments →</a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ===== Quick Actions ===== -->
+<div class="card-glass mb-4">
+  <h6 style="font-weight:700;margin-bottom:14px;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);">Quick Actions</h6>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a href="{{ url_for('admin_add_customer') }}" class="quick-btn qb-orange"><i class="bi bi-building-add"></i> Add Customer</a>
+    <a href="{{ url_for('admin_add_instrument') }}" class="quick-btn qb-cyan"><i class="bi bi-plus-circle"></i> Add Instrument</a>
+    <a href="{{ url_for('admin_add_user') }}" class="quick-btn qb-glass"><i class="bi bi-person-plus"></i> Add User</a>
+    <a href="{{ url_for('admin_import_excel') }}" class="quick-btn qb-green"><i class="bi bi-file-earmark-excel"></i> Import Excel</a>
+    <a href="{{ url_for('admin_downloads') }}" class="quick-btn qb-glass"><i class="bi bi-download"></i> Download Activity</a>
+    <a href="{{ url_for('sync_report') }}" class="quick-btn qb-cyan"><i class="bi bi-cloud-arrow-down"></i> Sync Dropbox</a>
+  </div>
+</div>
+
+<!-- ===== Recent Certificates ===== -->
+<div class="card-glass">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h6 style="font-weight:700;margin:0;font-size:14px;"><i class="bi bi-clock-history me-2" style="color:#f97316;"></i>Recent Certificates</h6>
+    <a href="{{ url_for('admin_certificates') }}" style="font-size:12px;color:#22d3ee;">View all →</a>
+  </div>
+  {% if recent_certs %}
+  <div class="table-responsive">
+    <table class="table table-borderless" style="font-size:13px;">
+      <thead>
+        <tr>
+          <th>Certificate No.</th><th>Asset / Instrument</th><th>Customer</th>
+          <th>Cal. Date</th><th>Due Date</th><th>Status</th><th>Source</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in recent_certs %}
+        {% set status = cert_status(c.due_date) %}
+        <tr>
+          <td><code style="color:#22d3ee;">{{ c.certificate_number }}</code></td>
+          <td style="font-weight:500;">{{ c.instrument_name }}</td>
+          <td><span style="color:var(--muted);">{{ c.company_name }}</span></td>
+          <td>{{ c.calibration_date|dateformat }}</td>
+          <td>{{ c.due_date|dateformat }}</td>
+          <td>
+            <span class="badge-pill badge-{{ status }}">
+              {% if status == 'calibrated' %}✅ Calibrated
+              {% elif status == 'due_soon' %}⚠️ Due Soon
+              {% else %}🔴 Overdue{% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="badge-pill badge-{{ c.source }}">
+              {{ '☁️ Dropbox' if c.source == 'dropbox' else '📝 Manual' }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;color:var(--muted);">
+    <i class="bi bi-file-earmark-x" style="font-size:32px;display:block;margin-bottom:8px;"></i>
+    <p style="margin:0;">No certificates yet. Add instruments and sync Dropbox to get started.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

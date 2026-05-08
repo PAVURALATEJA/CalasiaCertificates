@@ -1,0 +1,4 @@
+# This folder contains Jinja2 HTML templates.
+# These are NOT Python files — they contain template syntax that
+# looks like Python but is processed by Flask's template engine.
+# Pyrefly / Pyright should NOT analyze files in this folder.

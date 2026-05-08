@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Login — Cal-Asia Certificates{% endblock %}
+
+{% block nocontent %}
+<div class="full-page">
+  <div style="width:100%;max-width:420px;padding:20px;">
+
+    <!-- Logo -->
+    <div class="text-center mb-4">
+      <div style="width:60px;height:60px;background:linear-gradient(135deg,#f97316,#ea580c);
+                  border-radius:16px;display:flex;align-items:center;justify-content:center;
+                  margin:0 auto 16px;font-size:26px;color:#fff;">
+        <i class="bi bi-shield-check"></i>
+      </div>
+      <h1 style="font-size:22px;font-weight:700;margin:0;">Cal-Asia Certificate Portal</h1>
+      <p style="color:#8892a4;font-size:13px;margin:6px 0 0;">Calibration Management System</p>
+    </div>
+
+    <!-- Card -->
+    <div class="card-glass">
+      <h5 style="font-weight:600;margin-bottom:20px;">Sign in to your account</h5>
+
+      <form method="POST">
+        <div class="mb-3">
+          <label class="form-label"><i class="bi bi-person me-1"></i>Username</label>
+          <input type="text" name="username" class="form-control" placeholder="Enter username"
+                 autofocus required style="padding:10px 14px;"/>
+        </div>
+        <div class="mb-4">
+          <label class="form-label"><i class="bi bi-lock me-1"></i>Password</label>
+          <input type="password" name="password" class="form-control" placeholder="Enter password"
+                 required style="padding:10px 14px;"/>
+        </div>
+        <button type="submit" class="btn btn-orange w-100" style="padding:11px;">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </button>
+      </form>
+    </div>
+
+    <!-- Role hint -->
+    <div class="mt-3 card-glass" style="padding:14px 16px;font-size:12px;color:#8892a4;">
+      <div style="margin-bottom:6px;font-weight:600;color:#e2e8f0;">Account Types:</div>
+      <div><i class="bi bi-shield-fill-check" style="color:#f97316;"></i> <b>Admin</b> — Full system control</div>
+      <div class="mt-1"><i class="bi bi-cloud-arrow-up" style="color:#22d3ee;"></i> <b>Calibration Manager</b> — Upload PDFs via Dropbox</div>
+      <div class="mt-1"><i class="bi bi-file-earmark-text" style="color:#10b981;"></i> <b>Customer</b> — View your certificates</div>
+    </div>
+
+    <!-- Setup link (first time) -->
+    <div class="text-center mt-3">
+      <a href="/setup-admin" style="color:#8892a4;font-size:12px;text-decoration:none;">
+        <i class="bi bi-gear me-1"></i>First-time setup? Reset admin password
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

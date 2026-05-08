@@ -1,0 +1,19 @@
+# Pyrefly configuration
+# Excludes Jinja2 HTML templates and non-Python files from type checking
+
+[pyrefly]
+# Only type-check actual Python files
+project_includes = ["*.py"]
+
+# Exclude template directories (Jinja2 templates look like Python but are NOT)
+# Also exclude Pyrefly's own virtual in-memory analysis files
+project_excludes = [
+    "templates/**",
+    "templates/**/*.html",
+    "static/**",
+    ".env",
+    "__pyrefly_virtual__/**",
+]
+
+# Allow untyped code (Flask/Dropbox are partially typed)
+ignore_missing_imports = true

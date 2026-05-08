@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Add User — Cal-Asia Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-person-plus me-2" style="color:#f59e0b;"></i>Add New User</h1>
+  <p class="page-sub">Create a Calibration Manager or Customer login account.</p>
+</div>
+<div class="row">
+  <div class="col-lg-6">
+
+    <!-- Role Guide -->
+    <div class="card-glass mb-4" style="padding:14px 16px;">
+      <div style="font-size:12px;color:#8892a4;margin-bottom:10px;font-weight:600;">ROLE GUIDE</div>
+      <div style="font-size:13px;">
+        <div style="margin-bottom:6px;"><i class="bi bi-cloud-arrow-up me-2" style="color:#22d3ee;"></i><b style="color:#22d3ee;">Calibration Manager</b> — Can upload PDFs to Dropbox and trigger sync. No need to link to a customer.</div>
+        <div><i class="bi bi-person me-2" style="color:#10b981;"></i><b style="color:#10b981;">Customer</b> — Can only view their own certificates. Must be linked to a customer company.</div>
+      </div>
+    </div>
+
+    <form method="POST">
+      <div class="card-glass">
+        <div class="mb-3">
+          <label class="form-label">Role <span style="color:#ef4444;">*</span></label>
+          <select name="role" id="roleSelect" class="form-select" required onchange="toggleCustomer()">
+            <option value="">— Select Role —</option>
+            <option value="manager">Calibration Manager</option>
+            <option value="customer">Customer</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Full Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" name="full_name" class="form-control" placeholder="e.g. Ahmad Fauzi" required/>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Username <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="username" class="form-control" placeholder="e.g. manager1" required/>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Password <span style="color:#ef4444;">*</span></label>
+            <input type="password" name="password" class="form-control" placeholder="Min 6 characters" required/>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-control" placeholder="user@example.com"/>
+        </div>
+        <div class="mb-4" id="customerGroup" style="display:none;">
+          <label class="form-label">Link to Customer Company</label>
+          <select name="customer_id" class="form-select">
+            <option value="">— No Customer —</option>
+            {% for c in customers %}
+            <option value="{{ c.id }}">{{ c.company_name }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:11px;color:#8892a4;margin-top:4px;">Required for Customer role to see their certificates.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-orange"><i class="bi bi-check-circle me-1"></i>Create User</button>
+          <a href="{{ url_for('admin_users') }}" class="btn btn-glass">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function toggleCustomer() {
+  var role = document.getElementById('roleSelect').value;
+  document.getElementById('customerGroup').style.display = role === 'customer' ? 'block' : 'none';
+}
+</script>
+{% endblock %}

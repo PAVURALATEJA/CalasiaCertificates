@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Users — Cal-Asia Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  #userSearch { background:var(--navy3); border:1px solid var(--border); color:var(--text);
+                border-radius:8px; padding:8px 14px; font-size:13px; min-width:220px; }
+  #userSearch:focus { border-color:var(--orange); outline:none; }
+  .role-tabs { display:flex; gap:6px; }
+  .role-tab { padding:6px 16px; border-radius:20px; font-size:12px; font-weight:600;
+              cursor:pointer; border:1px solid var(--border); background:transparent;
+              color:var(--muted); transition:.15s; }
+  .role-tab.active { background:rgba(255,255,255,.1); color:#fff; border-color:rgba(255,255,255,.2); }
+  .role-tab.rt-mgr.active  { background:rgba(34,211,238,.18); border-color:rgba(34,211,238,.4); color:#67e8f9; }
+  .role-tab.rt-cust.active { background:rgba(16,185,129,.18); border-color:rgba(16,185,129,.4); color:#6ee7b7; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-people me-2" style="color:#f59e0b;"></i>Users</h1>
+    <p class="page-sub">Manage Calibration Managers and Customer accounts</p>
+  </div>
+  <a href="{{ url_for('admin_add_user') }}" class="btn btn-orange"><i class="bi bi-person-plus me-1"></i>Add User</a>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal fade" id="resetPwModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px;">
+    <div class="modal-content" style="background:#1a2340;border:1px solid #1e2d50;border-radius:14px;">
+      <div class="modal-header" style="border-color:#1e2d50;">
+        <h5 class="modal-title" style="font-size:15px;font-weight:600;"><i class="bi bi-key me-2" style="color:#f59e0b;"></i>Reset Password</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="resetPwForm">
+        <div class="modal-body">
+          <p style="font-size:13px;color:#8892a4;" id="resetPwUser"></p>
+          <div class="mb-3">
+            <label class="form-label">New Password</label>
+            <div class="input-group">
+              <input type="text" name="new_password" id="resetPwInput" class="form-control"
+                     placeholder="Enter new password (min 6 chars)" minlength="6" required/>
+              <button type="button" class="btn btn-glass" onclick="genPw()" title="Generate random password">
+                <i class="bi bi-shuffle"></i>
+              </button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:4px;">This will also update the visible password field in the table.</div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:#1e2d50;">
+          <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-orange">Reset Password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <input id="userSearch" type="text" placeholder="&#128269; Search name, username, company…" oninput="filterUsers()">
+  <div class="role-tabs">
+    <button class="role-tab active" onclick="setRoleFilter('all', this)">All</button>
+    <button class="role-tab rt-mgr"  onclick="setRoleFilter('manager', this)">Managers</button>
+    <button class="role-tab rt-cust" onclick="setRoleFilter('customer', this)">Customers</button>
+  </div>
+  <span id="userCount" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+</div>
+
+<div class="table-glass">
+  <table class="table" id="userTable">
+    <thead>
+      <tr>
+        <th>Full Name</th>
+        <th>Username</th>
+        <th>Role</th>
+        <th>Company</th>
+        <th>Email</th>
+        <th>Current Password</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="userBody">
+      {% for u in users %}
+      <tr data-role="{{ u.role }}"
+          data-search="{{ u.full_name|lower }} {{ u.username|lower }} {{ (u.company_name or '')|lower }} {{ (u.email or '')|lower }}">
+        <td>
+          <div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,
+              {{ '#f97316,#ea580c' if u.role == 'manager' else '#10b981,#059669' }});
+              display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;">
+              {{ u.full_name[0]|upper }}
+            </div>
+            <b>{{ u.full_name }}</b>
+          </div>
+        </td>
+        <td><code style="color:#8892a4;">{{ u.username }}</code></td>
+        <td>
+          {% if u.role == 'manager' %}
+          <span class="badge-pill" style="background:rgba(34,211,238,.12);color:#22d3ee;border:1px solid rgba(34,211,238,.3);">
+            <i class="bi bi-cloud-arrow-up me-1"></i>Manager
+          </span>
+          {% else %}
+          <span class="badge-pill badge-calibrated">
+            <i class="bi bi-person me-1"></i>Customer
+          </span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.company_name %}
+          <a href="{{ url_for('admin_customers') }}" style="color:var(--muted);text-decoration:none;font-size:13px;">
+            {{ u.company_name }}
+          </a>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if u.email %}
+          <a href="mailto:{{ u.email }}" style="color:var(--muted);font-size:12px;text-decoration:none;">{{ u.email }}</a>
+          {% else %}<span style="color:var(--muted);">—</span>{% endif %}
+        </td>
+        <td>
+          {% if u.plain_password %}
+          <code style="color:#fcd34d;background:rgba(245,158,11,.1);padding:3px 8px;border-radius:4px;font-size:12px;">
+            {{ u.plain_password }}
+          </code>
+          {% else %}
+          <span style="color:var(--muted);font-size:12px;">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:12px;color:var(--muted);">
+          {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
+        </td>
+        <td>
+          <div class="d-flex gap-2">
+            <!-- Reset Password -->
+            <button class="btn btn-sm btn-amber"
+                    onclick="openReset({{ u.id }}, '{{ u.full_name|replace("'","\\'") }}')"
+                    title="Reset Password">
+              <i class="bi bi-key"></i>
+            </button>
+            <!-- Deactivate -->
+            <form method="POST" action="{{ url_for('admin_delete_user', uid=u.id) }}"
+                  onsubmit="return confirm('Deactivate {{ u.full_name }}?');" style="display:inline;">
+              <button class="btn btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);"
+                      title="Deactivate User">
+                <i class="bi bi-person-x"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center" style="color:var(--muted);padding:40px;">
+        No users yet. <a href="{{ url_for('admin_add_user') }}" style="color:#f97316;">Add one →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+let activeRoleFilter = 'all';
+function setRoleFilter(role, btn) {
+  activeRoleFilter = role;
+  document.querySelectorAll('.role-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterUsers();
+}
+function filterUsers() {
+  const search = document.getElementById('userSearch').value.toLowerCase();
+  let vis = 0;
+  document.querySelectorAll('#userBody tr[data-role]').forEach(row => {
+    const sm = !search || (row.dataset.search || '').includes(search);
+    const rm = activeRoleFilter === 'all' || row.dataset.role === activeRoleFilter;
+    row.style.display = (sm && rm) ? '' : 'none';
+    if (sm && rm) vis++;
+  });
+  document.getElementById('userCount').textContent = `Showing ${vis} user(s)`;
+}
+function openReset(uid, name) {
+  document.getElementById('resetPwUser').textContent = 'Resetting password for: ' + name;
+  document.getElementById('resetPwInput').value = '';
+  document.getElementById('resetPwForm').action = '/admin/users/' + uid + '/reset-password';
+  new bootstrap.Modal(document.getElementById('resetPwModal')).show();
+}
+function genPw() {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
+  let pw = '';
+  for (let i = 0; i < 10; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('resetPwInput').value = pw;
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const total = document.querySelectorAll('#userBody tr[data-role]').length;
+  document.getElementById('userCount').textContent = `Showing ${total} user(s)`;
+});
+</script>
+{% endblock %}

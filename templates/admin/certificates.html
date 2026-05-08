@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% block title %}All Certificates — Cal-Asia Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ---- Toolbar ---- */
+  .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .tb-search { background:var(--navy3); border:1px solid var(--border); color:var(--text);
+               border-radius:8px; padding:7px 13px; font-size:13px; min-width:210px; }
+  .tb-search:focus { border-color:var(--orange); outline:none; }
+
+  /* ---- Sticky table wrapper ---- */
+  .cert-table-wrap {
+    width:100%; overflow-x:auto;
+    border-radius:12px; border:1px solid var(--border);
+  }
+  #certAdminTable {
+    min-width:900px;     /* ensures horizontal scroll before columns crush */
+    border-collapse:collapse;
+    width:100%;
+  }
+  /* Freeze last column (Actions) */
+  #certAdminTable thead th:last-child,
+  #certAdminTable tbody td:last-child {
+    position:sticky; right:0;
+    background:var(--navy3);
+    box-shadow:-2px 0 8px rgba(0,0,0,.25);
+    z-index:2;
+  }
+  #certAdminTable tbody td:last-child { background:var(--card); }
+  #certAdminTable tbody tr:hover td:last-child { background:#1e2a45; }
+
+  /* ---- Row highlights ---- */
+  tr.row-overdue td { background:rgba(239,68,68,.045) !important; }
+  tr.row-soon td    { background:rgba(245,158,11,.035) !important; }
+
+  /* ---- Days chip ---- */
+  .days-chip { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px;
+               display:inline-block; white-space:nowrap; }
+  .chip-soon    { background:rgba(245,158,11,.18); color:#fcd34d; }
+  .chip-overdue { background:rgba(239,68,68,.18);  color:#fca5a5; }
+
+  /* ---- Col toggle ---- */
+  .col-toggle-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .col-toggle-btn {
+    padding:3px 10px; font-size:11px; font-weight:600; border-radius:20px;
+    border:1px solid var(--border); background:rgba(255,255,255,.05);
+    color:var(--muted); cursor:pointer; transition:.15s; user-select:none;
+  }
+  .col-toggle-btn.on { background:rgba(34,211,238,.15); border-color:rgba(34,211,238,.4); color:#67e8f9; }
+
+  /* ---- Manual add modal ---- */
+  .modal-content-dark { background:#1a2340; border:1px solid #1e2d50; border-radius:14px; }
+  .manual-cert-badge {
+    background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3);
+    border-radius:8px; padding:10px 14px; margin-bottom:14px; font-size:12px; color:#6ee7b7;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-file-earmark-text me-2" style="color:#10b981;"></i>All Certificates</h1>
+    <p class="page-sub" id="certCountLabel">{{ certs|length }} certificate(s) in the system</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <!-- Manual Add Certificate -->
+    <button class="btn btn-orange" data-bs-toggle="modal" data-bs-target="#manualCertModal">
+      <i class="bi bi-plus-circle me-1"></i>Add Certificate
+    </button>
+    <form action="{{ url_for('admin_fix_missing_links') }}" method="POST">
+      <button type="submit" class="btn btn-outline-warning">
+        <i class="bi bi-link-45deg me-1"></i>Fix PDF Links
+      </button>
+    </form>
+    <a href="{{ url_for('admin_downloads') }}" class="btn btn-glass">
+      <i class="bi bi-download me-1"></i>Downloads
+    </a>
+    <button onclick="exportCSV()" class="btn btn-glass">
+      <i class="bi bi-filetype-csv me-1"></i>Export CSV
+    </button>
+  </div>
+</div>
+
+{% if missing_links_count > 0 %}
+<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:12px 18px;margin-bottom:14px;color:#fcd34d;">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <strong>{{ missing_links_count }} certificate(s) have no Dropbox path.</strong>
+  Click <strong>"Fix PDF Links"</strong> above to correct them.
+</div>
+{% endif %}
+
+<!-- ===== MANUAL ADD CERTIFICATE MODAL ===== -->
+<div class="modal fade" id="manualCertModal" tabindex="-1" aria-labelledby="manualCertLabel">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+    <div class="modal-content modal-content-dark">
+      <div class="modal-header" style="border-color:#1e2d50;">
+        <h5 class="modal-title" id="manualCertLabel" style="font-size:15px;font-weight:700;">
+          <i class="bi bi-plus-circle me-2" style="color:#10b981;"></i>Add Certificate Manually
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('admin_add_certificate_manual') }}">
+        <div class="modal-body">
+          <div class="manual-cert-badge">
+            <i class="bi bi-info-circle me-2"></i>
+            Use this to manually record a certificate for any instrument — even if it was synced from Dropbox.
+            The PDF link can be fixed later using "Fix PDF Links".
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Instrument (Asset / Serial) <span style="color:#ef4444;">*</span></label>
+            <select name="instrument_id" class="form-select" required id="instrSelectModal">
+              <option value="">— Select Instrument —</option>
+              {% for i in all_instruments %}
+              <option value="{{ i.id }}">
+                {{ i.asset_number or i.instrument_name }} — {{ i.serial_number }} ({{ i.company_name }})
+              </option>
+              {% endfor %}
+            </select>
+            <!-- Live search filter for instrument -->
+            <input type="text" id="instrSearchModal" class="form-control mt-1" placeholder="Type to filter instruments…"
+                   style="font-size:12px;" oninput="filterInstrSelect()">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Certificate Number <span style="color:#ef4444;">*</span></label>
+            <input type="text" name="certificate_number" class="form-control"
+                   placeholder="e.g. CAL2026_001" required maxlength="100">
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-6">
+              <label class="form-label">Calibration Date <span style="color:#ef4444;">*</span></label>
+              <input type="date" name="calibration_date" class="form-control" required
+                     value="{{ today.strftime('%Y-%m-%d') }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Due Date <span style="color:#ef4444;">*</span></label>
+              <input type="date" name="due_date" class="form-control" required
+                     id="dueDateInput">
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Dropbox File Path <span style="color:var(--muted);font-weight:400;">(optional — fill later)</span></label>
+            <input type="text" name="dropbox_file_path" class="form-control"
+                   placeholder="/Calibration_Certificates/SERIAL_CERTNO.pdf">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:#1e2d50;">
+          <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-orange">
+            <i class="bi bi-plus-circle me-1"></i>Add Certificate
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOOLBAR ===== -->
+<div class="toolbar">
+  <input class="tb-search" id="certAdminSearch" type="text"
+         placeholder="&#128269; Cert No., Asset, Serial, Customer…"
+         value="{{ request.args.get('search', '') }}" oninput="filterCerts()">
+  <select id="certCustFilter" class="form-select" style="width:auto;min-width:170px;" onchange="filterCerts()">
+    <option value="">All Customers</option>
+    {% set seen = [] %}
+    {% for c in certs %}
+      {% if c.company_name not in seen %}
+        {% set _ = seen.append(c.company_name) %}
+        <option value="{{ c.company_name|lower }}">{{ c.company_name }}</option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <select id="certStatusFilter" class="form-select" style="width:auto;min-width:150px;" onchange="filterCerts()">
+    <option value="all">All Statuses</option>
+    <option value="calibrated">✅ Calibrated</option>
+    <option value="due_soon">⚠️ Due Soon</option>
+    <option value="overdue">🔴 Overdue</option>
+  </select>
+  <select id="certSourceFilter" class="form-select" style="width:auto;min-width:145px;" onchange="filterCerts()">
+    <option value="all">All Sources</option>
+    <option value="dropbox">☁️ Dropbox</option>
+    <option value="manual">📝 Manual</option>
+  </select>
+  <span id="certVisCount" style="font-size:12px;color:var(--muted);white-space:nowrap;"></span>
+</div>
+
+<!-- Column toggle -->
+<div class="col-toggle-bar" style="margin-bottom:12px;">
+  <span style="font-size:11px;color:var(--muted);align-self:center;">Columns:</span>
+  <button class="col-toggle-btn on" onclick="toggleCol(4, this)">Model</button>
+  <button class="col-toggle-btn on" onclick="toggleCol(5, this)">Cal. Date</button>
+  <button class="col-toggle-btn on" onclick="toggleCol(8, this)">Source</button>
+  <button class="col-toggle-btn on" onclick="toggleCol(9, this)">Downloads</button>
+</div>
+
+<!-- ===== TABLE ===== -->
+<div class="cert-table-wrap">
+  <table class="table" id="certAdminTable">
+    <thead>
+      <tr>
+        <th style="min-width:130px;">Certificate No.</th>
+        <th style="min-width:110px;">Asset No.</th>
+        <th style="min-width:120px;">Serial No.</th>
+        <th style="min-width:120px;">Customer</th>
+        <th style="min-width:90px;" data-col="4">Model</th>
+        <th style="min-width:95px;" data-col="5">Cal. Date</th>
+        <th style="min-width:110px;">Due Date</th>
+        <th style="min-width:120px;">Status</th>
+        <th style="min-width:100px;" data-col="8">Source</th>
+        <th style="min-width:90px;" data-col="9">Downloads</th>
+        <th style="min-width:80px;">PDF / Action</th>
+      </tr>
+    </thead>
+    <tbody id="certAdminBody">
+      {% for c in certs %}
+      {% set status = cert_status(c.due_date) %}
+      {% set days_diff = (c.due_date - today).days %}
+      <tr class="{{ 'row-overdue' if status=='overdue' else ('row-soon' if status=='due_soon' else '') }}"
+          data-status="{{ status }}"
+          data-source="{{ c.source }}"
+          data-customer="{{ c.company_name|lower }}"
+          data-search="{{ c.certificate_number|lower }} {{ c.serial_number|lower }} {{ (c.asset_number or '')|lower }} {{ c.company_name|lower }}">
+        <td><code style="color:#22d3ee;font-size:12px;">{{ c.certificate_number }}</code></td>
+        <td><b style="color:var(--text);font-size:13px;">{{ c.asset_number or '—' }}</b></td>
+        <td><code style="color:#f97316;font-size:11px;">{{ c.serial_number }}</code></td>
+        <td style="color:var(--muted);font-size:12px;">{{ c.company_name }}</td>
+        <td style="color:var(--muted);font-size:12px;" data-col="4">{{ c.model or '—' }}</td>
+        <td style="font-size:12px;" data-col="5">{{ c.calibration_date|dateformat }}</td>
+        <td style="font-size:12px;white-space:nowrap;">
+          {{ c.due_date|dateformat }}
+          {% if status == 'due_soon' %}
+          <span class="days-chip chip-soon">{{ days_diff }}d</span>
+          {% elif status == 'overdue' %}
+          <span class="days-chip chip-overdue">{{ days_diff|abs }}d over</span>
+          {% endif %}
+        </td>
+        <td>
+          <span class="badge-pill badge-{{ status }}" style="font-size:11px;white-space:nowrap;">
+            {% if status == 'calibrated' %}✅ Calibrated
+            {% elif status == 'due_soon' %}⚠️ Due Soon
+            {% else %}🔴 Overdue{% endif %}
+          </span>
+        </td>
+        <td data-col="8">
+          <span class="badge-pill badge-{{ c.source }}" style="font-size:11px;white-space:nowrap;">
+            {{ '☁️ Dropbox' if c.source == 'dropbox' else '📝 Manual' }}
+          </span>
+        </td>
+        <td data-col="9">
+          {% if c.download_count and c.download_count > 0 %}
+          <span style="background:rgba(16,185,129,.15);color:#10b981;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:600;"
+                title="Last: {{ c.last_downloaded.strftime('%d %b %H:%M') if c.last_downloaded else '' }}">
+            {{ c.download_count }}×
+          </span>
+          {% else %}
+          <span style="color:var(--muted);font-size:12px;">—</span>
+          {% endif %}
+        </td>
+        <td style="white-space:nowrap;">
+          {% if c.dropbox_file_path or c.dropbox_shared_link %}
+          <a href="{{ url_for('admin_preview_pdf', cert_id=c.id) }}" target="_blank"
+             class="btn btn-sm"
+             style="background:rgba(34,211,238,.12);color:#22d3ee;border:1px solid rgba(34,211,238,.3);"
+             title="Open PDF">
+            <i class="bi bi-file-pdf"></i>
+          </a>
+          {% else %}
+          <button class="btn btn-sm"
+                  style="background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.3);font-size:11px;"
+                  title="Edit dates for this certificate"
+                  onclick="openEditModal({{ c.id }}, '{{ c.certificate_number }}', '{{ c.calibration_date }}', '{{ c.due_date }}')">
+            <i class="bi bi-pencil"></i>
+          </button>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="11" class="text-center" style="color:var(--muted);padding:40px;">
+        No certificates yet. <a href="#" data-bs-toggle="modal" data-bs-target="#manualCertModal" style="color:#f97316;">Add one manually</a> or sync Dropbox.
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ===== EDIT CERT DATES MODAL ===== -->
+<div class="modal fade" id="editCertModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content modal-content-dark">
+      <div class="modal-header" style="border-color:#1e2d50;">
+        <h5 class="modal-title" style="font-size:15px;font-weight:700;">
+          <i class="bi bi-pencil me-2" style="color:#f97316;"></i>Edit Certificate Dates
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="editCertForm" action="">
+        <div class="modal-body">
+          <p style="font-size:13px;color:var(--muted);" id="editCertLabel"></p>
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label">Calibration Date</label>
+              <input type="date" name="calibration_date" id="editCalDate" class="form-control" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Due Date</label>
+              <input type="date" name="due_date" id="editDueDate" class="form-control" required>
+            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label">Dropbox File Path <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
+            <input type="text" name="dropbox_file_path" id="editDropboxPath" class="form-control"
+                   placeholder="/Calibration_Certificates/SERIAL_CERTNO.pdf">
+          </div>
+        </div>
+        <div class="modal-footer" style="border-color:#1e2d50;">
+          <button type="button" class="btn btn-glass" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-orange"><i class="bi bi-check-circle me-1"></i>Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Filter =====
+function filterCerts() {
+  const search = document.getElementById('certAdminSearch').value.toLowerCase();
+  const cust   = document.getElementById('certCustFilter').value.toLowerCase();
+  const status = document.getElementById('certStatusFilter').value;
+  const source = document.getElementById('certSourceFilter').value;
+  let vis = 0;
+  document.querySelectorAll('#certAdminBody tr[data-status]').forEach(row => {
+    const sm  = !search || (row.dataset.search || '').includes(search);
+    const cm  = !cust   || (row.dataset.customer || '').includes(cust);
+    const stm = status === 'all' || row.dataset.status === status;
+    const srm = source === 'all' || row.dataset.source === source;
+    row.style.display = (sm && cm && stm && srm) ? '' : 'none';
+    if (sm && cm && stm && srm) vis++;
+  });
+  document.getElementById('certVisCount').textContent = `Showing ${vis} of {{ certs|length }}`;
+  document.getElementById('certCountLabel').textContent = `Showing ${vis} of {{ certs|length }} certificate(s)`;
+}
+
+// ===== Column toggle =====
+const hiddenCols = new Set();
+function toggleCol(colIdx, btn) {
+  const cells = document.querySelectorAll(`[data-col="${colIdx}"]`);
+  if (hiddenCols.has(colIdx)) {
+    hiddenCols.delete(colIdx);
+    cells.forEach(c => c.style.display = '');
+    btn.classList.add('on');
+  } else {
+    hiddenCols.add(colIdx);
+    cells.forEach(c => c.style.display = 'none');
+    btn.classList.remove('on');
+  }
+}
+
+// ===== Auto due date (cal_date + 1 year) =====
+document.addEventListener('DOMContentLoaded', () => {
+  const calInput = document.querySelector('input[name="calibration_date"]');
+  const dueInput = document.getElementById('dueDateInput');
+  if (calInput && dueInput) {
+    // Set default due date = cal date + 1 year
+    const d = new Date(calInput.value);
+    d.setFullYear(d.getFullYear() + 1);
+    dueInput.value = d.toISOString().slice(0,10);
+    calInput.addEventListener('change', () => {
+      const d2 = new Date(calInput.value);
+      d2.setFullYear(d2.getFullYear() + 1);
+      dueInput.value = d2.toISOString().slice(0,10);
+    });
+  }
+
+  // Count display
+  const total = document.querySelectorAll('#certAdminBody tr[data-status]').length;
+  document.getElementById('certVisCount').textContent = `Showing ${total} of ${total}`;
+});
+
+// ===== Instrument search in modal =====
+function filterInstrSelect() {
+  const q = document.getElementById('instrSearchModal').value.toLowerCase();
+  const sel = document.getElementById('instrSelectModal');
+  Array.from(sel.options).forEach(opt => {
+    opt.style.display = (!q || opt.text.toLowerCase().includes(q)) ? '' : 'none';
+  });
+}
+
+// ===== Edit cert dates modal =====
+function openEditModal(certId, certNo, calDate, dueDate) {
+  document.getElementById('editCertLabel').textContent = 'Certificate: ' + certNo;
+  document.getElementById('editCalDate').value = calDate;
+  document.getElementById('editDueDate').value = dueDate;
+  document.getElementById('editCertForm').action = '/admin/certificates/' + certId + '/edit';
+  document.getElementById('editDropboxPath').value = '';
+  new bootstrap.Modal(document.getElementById('editCertModal')).show();
+}
+
+// ===== Export CSV =====
+function exportCSV() {
+  const rows = Array.from(document.querySelectorAll('#certAdminBody tr[data-status]'))
+                    .filter(r => r.style.display !== 'none');
+  const headers = ['Certificate No.','Asset No.','Serial No.','Customer','Model','Cal. Date','Due Date','Status','Source','Downloads'];
+  const data = rows.map(r => {
+    const cells = r.querySelectorAll('td');
+    return [
+      cells[0]?.textContent.trim(),
+      cells[1]?.textContent.trim(),
+      cells[2]?.textContent.trim(),
+      cells[3]?.textContent.trim(),
+      cells[4]?.textContent.trim(),
+      cells[5]?.textContent.trim(),
+      cells[6]?.textContent.trim().replace(/\s+/g,' '),
+      cells[7]?.textContent.trim(),
+      cells[8]?.textContent.trim(),
+      cells[9]?.textContent.trim(),
+    ];
+  });
+  const csv = [headers, ...data].map(r => r.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'certificates.csv'; a.click();
+}
+</script>
+{% endblock %}

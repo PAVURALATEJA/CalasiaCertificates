@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}My Certificates — Cal-Asia{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* ---- Status dot ---- */
+  .status-dot { display:inline-block; width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot-green  { background:#10b981; box-shadow:0 0 6px rgba(16,185,129,.6); }
+  .dot-amber  { background:#f59e0b; box-shadow:0 0 6px rgba(245,158,11,.6); }
+  .dot-red    { background:#ef4444; box-shadow:0 0 6px rgba(239,68,68,.6); }
+  .dot-grey   { background:#4b5563; }
+
+  /* ---- Filter Tabs ---- */
+  .filter-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
+  .filter-tab {
+    padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    cursor:pointer; border:1px solid var(--border);
+    background:transparent; color:var(--muted); transition:.15s;
+    user-select:none;
+  }
+  .filter-tab:hover { background:rgba(255,255,255,.06); color:var(--text); }
+  .filter-tab.active { color:#fff; border-color:transparent; }
+  .filter-tab.tab-all.active    { background:rgba(255,255,255,.12); }
+  .filter-tab.tab-ok.active     { background:rgba(16,185,129,.25); border-color:rgba(16,185,129,.4); color:#6ee7b7; }
+  .filter-tab.tab-soon.active   { background:rgba(245,158,11,.2); border-color:rgba(245,158,11,.4); color:#fcd34d; }
+  .filter-tab.tab-overdue.active{ background:rgba(239,68,68,.2); border-color:rgba(239,68,68,.4); color:#fca5a5; }
+  .filter-tab.tab-nocert.active { background:rgba(139,92,246,.2); border-color:rgba(139,92,246,.4); color:#c4b5fd; }
+
+  /* ---- Instrument table ---- */
+  #instrSearch { background:var(--navy3); border:1px solid var(--border); color:var(--text);
+                 border-radius:8px; padding:8px 14px; font-size:13px; width:100%; max-width:320px; }
+  #instrSearch:focus { border-color:var(--orange); outline:none; box-shadow:0 0 0 3px rgba(249,115,22,.12); }
+  .instr-table th { cursor:pointer; user-select:none; }
+  .instr-table th:hover { color:var(--text) !important; }
+  .instr-table th .sort-icon { font-size:10px; margin-left:4px; opacity:.5; }
+  .sort-asc .sort-icon::after  { content:'▲'; }
+  .sort-desc .sort-icon::after { content:'▼'; }
+
+  /* ---- Pagination ---- */
+  .pager { display:flex; align-items:center; gap:6px; margin-top:14px; flex-wrap:wrap; }
+  .pager-btn {
+    padding:5px 12px; border-radius:7px; border:1px solid var(--border);
+    background:rgba(255,255,255,.05); color:var(--muted); font-size:12px;
+    cursor:pointer; transition:.15s;
+  }
+  .pager-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
+  .pager-btn.active { background:var(--orange); border-color:var(--orange); color:#fff; }
+  .pager-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .pager-info { font-size:12px; color:var(--muted); margin-left:auto; }
+
+  /* ---- Summary pill row ---- */
+  .summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+  .summary-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
+    border:1px solid;
+  }
+  .sp-green { background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.3); color:#6ee7b7; }
+  .sp-amber { background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.3); color:#fcd34d; }
+  .sp-red   { background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.3);  color:#fca5a5; }
+  .sp-grey  { background:rgba(75,85,99,.15);   border-color:rgba(75,85,99,.4);   color:#9ca3af; }
+
+  /* ---- Cert table row highlight ---- */
+  tr.row-overdue td { background:rgba(239,68,68,.04); }
+  tr.row-soon td    { background:rgba(245,158,11,.04); }
+
+  /* ---- Days chip ---- */
+  .days-chip { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; display:inline-block; }
+  .chip-soon   { background:rgba(245,158,11,.18); color:#fcd34d; }
+  .chip-overdue{ background:rgba(239,68,68,.18);  color:#fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-file-earmark-medical me-2" style="color:#10b981;"></i>My Calibration Certificates</h1>
+    <p class="page-sub">{{ customer.company_name if customer else '' }} — Certificate Portal</p>
+  </div>
+  <!-- Search -->
+  <form method="get" style="display:flex;gap:8px;align-items:center;">
+    <div class="input-group" style="max-width:380px;">
+      <input type="text" name="search" class="form-control"
+             placeholder="Search certificate, asset or serial…"
+             value="{{ request.args.get('search', '') }}">
+      <button class="btn btn-orange" type="submit"><i class="bi bi-search"></i></button>
+      {% if request.args.get('search') %}
+      <a href="{{ url_for('customer_dashboard') }}" class="btn btn-glass" title="Clear"><i class="bi bi-x"></i></a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- ===== Summary Stat Cards ===== -->
+{% set total = certs|length %}
+{% set overdue_list = [] %}
+{% set due_soon_list = [] %}
+{% set calibrated_list = [] %}
+{% for c in certs %}
+  {% set s = cert_status(c.due_date) %}
+  {% if s == 'overdue' %}{% set _ = overdue_list.append(1) %}
+  {% elif s == 'due_soon' %}{% set _ = due_soon_list.append(1) %}
+  {% else %}{% set _ = calibrated_list.append(1) %}{% endif %}
+{% endfor %}
+{% set overdue = overdue_list|length %}
+{% set due_soon = due_soon_list|length %}
+{% set calibrated = calibrated_list|length %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card cyan">
+      <div class="stat-icon stat-icon-cyan"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="stat-num">{{ total }}</div>
+      <div class="stat-label">Total Certificates</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card green">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-check-circle"></i></div>
+      <div class="stat-num">{{ calibrated }}</div>
+      <div class="stat-label">Calibrated (Valid)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-exclamation-circle"></i></div>
+      <div class="stat-num">{{ due_soon }}</div>
+      <div class="stat-label">Due Soon (&lt;30 days)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card red">
+      <div class="stat-icon stat-icon-red"><i class="bi bi-x-circle"></i></div>
+      <div class="stat-num">{{ overdue }}</div>
+      <div class="stat-label">Overdue</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Instruments Section — Compact Table ===== -->
+{% if instruments %}
+{% set instr_total = instruments|length %}
+{% set instr_ok = [] %}{% set instr_soon = [] %}{% set instr_ov = [] %}{% set instr_nc = [] %}
+{% for i in instruments %}
+  {% if not i.latest_due_date %}{% set _ = instr_nc.append(1) %}
+  {% else %}
+    {% set s = cert_status(i.latest_due_date) %}
+    {% if s == 'calibrated' %}{% set _ = instr_ok.append(1) %}
+    {% elif s == 'due_soon' %}{% set _ = instr_soon.append(1) %}
+    {% else %}{% set _ = instr_ov.append(1) %}{% endif %}
+  {% endif %}
+{% endfor %}
+
+<div class="card-glass mb-4">
+  <!-- Header row -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h6 style="font-weight:700;margin:0;font-size:14px;">
+      <i class="bi bi-cpu me-2" style="color:#22d3ee;"></i>Your Instruments
+      <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px;">{{ instr_total }} total</span>
+    </h6>
+    <input id="instrSearch" type="text" placeholder="&#128269; Filter instruments…" oninput="filterInstruments()">
+  </div>
+
+  <!-- Summary pills -->
+  <div class="summary-row">
+    <span class="summary-pill sp-green"><span class="status-dot dot-green"></span> {{ instr_ok|length }} Calibrated</span>
+    <span class="summary-pill sp-amber"><span class="status-dot dot-amber"></span> {{ instr_soon|length }} Due Soon</span>
+    <span class="summary-pill sp-red"><span class="status-dot dot-red"></span> {{ instr_ov|length }} Overdue</span>
+    {% if instr_nc|length > 0 %}
+    <span class="summary-pill sp-grey"><span class="status-dot dot-grey"></span> {{ instr_nc|length }} No Certificate</span>
+    {% endif %}
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <button class="filter-tab tab-all active" onclick="setFilter('all', this)">All ({{ instr_total }})</button>
+    <button class="filter-tab tab-ok"   onclick="setFilter('calibrated', this)">✅ Calibrated ({{ instr_ok|length }})</button>
+    <button class="filter-tab tab-soon" onclick="setFilter('due_soon', this)">⚠️ Due Soon ({{ instr_soon|length }})</button>
+    <button class="filter-tab tab-overdue" onclick="setFilter('overdue', this)">🔴 Overdue ({{ instr_ov|length }})</button>
+    {% if instr_nc|length > 0 %}
+    <button class="filter-tab tab-nocert" onclick="setFilter('no_cert', this)">⚪ No Cert ({{ instr_nc|length }})</button>
+    {% endif %}
+  </div>
+
+  <!-- Compact Table -->
+  <div class="table-responsive">
+    <table class="table instr-table" id="instrTable">
+      <thead>
+        <tr>
+          <th style="width:36px;color:var(--muted);font-size:11px;"></th>
+          <th onclick="sortTable(1)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Asset No. <span class="sort-icon"></span></th>
+          <th onclick="sortTable(2)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Model <span class="sort-icon"></span></th>
+          <th onclick="sortTable(3)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Serial No. <span class="sort-icon"></span></th>
+          <th onclick="sortTable(4)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Location <span class="sort-icon"></span></th>
+          <th onclick="sortTable(5)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Due Date <span class="sort-icon"></span></th>
+          <th style="color:var(--muted);font-size:11px;text-transform:uppercase;">Certs</th>
+        </tr>
+      </thead>
+      <tbody id="instrBody">
+        {% for i in instruments %}
+        {% if not i.latest_due_date %}
+          {% set s = 'no_cert' %}{% set dot = 'dot-grey' %}
+        {% else %}
+          {% set s = cert_status(i.latest_due_date) %}
+          {% set dot = 'dot-green' if s == 'calibrated' else ('dot-amber' if s == 'due_soon' else 'dot-red') %}
+        {% endif %}
+        <tr data-status="{{ s }}"
+            data-search="{{ (i.asset_number or '') ~ ' ' ~ (i.serial_number or '') ~ ' ' ~ (i.model or '') ~ ' ' ~ (i.location or '') | lower }}">
+          <td style="text-align:center;"><span class="status-dot {{ dot }}" title="{{ s|replace('_',' ')|title }}"></span></td>
+          <td style="font-weight:600;color:var(--text);">{{ i.asset_number or i.instrument_name or '—' }}</td>
+          <td style="color:var(--muted);font-size:12px;">{{ i.model or '—' }}</td>
+          <td><code style="color:#f97316;font-size:11px;">{{ i.serial_number }}</code></td>
+          <td style="color:var(--muted);font-size:12px;">{{ i.location or '—' }}</td>
+          <td style="font-size:13px;">
+            {% if i.latest_due_date %}
+              {{ i.latest_due_date|dateformat }}
+              {% set days = (i.latest_due_date - today).days %}
+              {% if days < 0 %}
+                <span class="days-chip chip-overdue">{{ days|abs }}d over</span>
+              {% elif days <= 30 %}
+                <span class="days-chip chip-soon">{{ days }}d left</span>
+              {% endif %}
+            {% else %}
+              <span style="color:var(--muted);font-size:12px;">No cert</span>
+            {% endif %}
+          </td>
+          <td><span class="badge-pill badge-calibrated" style="font-size:11px;">{{ i.cert_count }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div id="noInstrMsg" style="display:none;text-align:center;padding:30px;color:var(--muted);">
+    <i class="bi bi-funnel" style="font-size:28px;display:block;margin-bottom:8px;"></i>No instruments match the current filter.
+  </div>
+
+  <!-- Pagination -->
+  <div class="pager" id="pager">
+    <button class="pager-btn" id="prevBtn" onclick="changePage(-1)"><i class="bi bi-chevron-left"></i> Prev</button>
+    <div id="pageNums" style="display:flex;gap:4px;"></div>
+    <button class="pager-btn" id="nextBtn" onclick="changePage(1)">Next <i class="bi bi-chevron-right"></i></button>
+    <span class="pager-info" id="pagerInfo"></span>
+  </div>
+</div>
+{% endif %}
+
+<!-- ===== All Certificates Table ===== -->
+<div class="card-glass">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h6 style="font-weight:700;margin:0;font-size:14px;">
+      <i class="bi bi-list-ul me-2" style="color:#f97316;"></i>All My Certificates
+    </h6>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <select id="certStatusFilter" class="form-select form-select-sm" style="width:auto;min-width:140px;" onchange="filterCerts()">
+        <option value="all">All Statuses</option>
+        <option value="calibrated">✅ Calibrated</option>
+        <option value="due_soon">⚠️ Due Soon</option>
+        <option value="overdue">🔴 Overdue</option>
+      </select>
+    </div>
+  </div>
+
+  {% if certs %}
+  <div class="table-responsive">
+    <table class="table" id="certTable">
+      <thead>
+        <tr>
+          <th>Certificate No.</th>
+          <th>Asset No.</th>
+          <th>Serial No.</th>
+          <th>Model</th>
+          <th>Cal. Date</th>
+          <th>Due Date</th>
+          <th>Status</th>
+          <th>PDF</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in certs %}
+        {% set s = cert_status(c.due_date) %}
+        {% set days_diff = (c.due_date - today).days %}
+        <tr class="{{ 'row-overdue' if s=='overdue' else ('row-soon' if s=='due_soon' else '') }}"
+            data-cert-status="{{ s }}">
+          <td><code style="color:#22d3ee;">{{ c.certificate_number }}</code></td>
+          <td><b style="color:var(--text);">{{ c.asset_number or '—' }}</b></td>
+          <td><code style="color:#f97316;font-size:11px;">{{ c.serial_number }}</code></td>
+          <td style="color:var(--muted);font-size:12px;">{{ c.model or '—' }}</td>
+          <td style="font-size:13px;">{{ c.calibration_date|dateformat }}</td>
+          <td style="font-size:13px;">
+            {{ c.due_date|dateformat }}
+            {% if s == 'due_soon' %}
+            <span class="days-chip chip-soon">{{ days_diff }}d</span>
+            {% elif s == 'overdue' %}
+            <span class="days-chip chip-overdue">{{ days_diff|abs }}d over</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge-pill badge-{{ s }}">
+              {% if s == 'calibrated' %}✅ Calibrated
+              {% elif s == 'due_soon' %}⚠️ Due Soon
+              {% else %}🔴 Overdue{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if c.dropbox_file_path or c.dropbox_shared_link %}
+            <a href="{{ url_for('customer_open_certificate', cert_id=c.id) }}"
+               class="btn btn-sm"
+               style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);font-weight:600;white-space:nowrap;"
+               target="_blank">
+              <i class="bi bi-file-pdf me-1"></i>Open PDF
+            </a>
+            {% else %}
+            <span style="color:var(--muted);font-size:12px;"><i class="bi bi-clock me-1"></i>Pending</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:50px;color:var(--muted);">
+    <i class="bi bi-file-earmark-x" style="font-size:40px;display:block;margin-bottom:12px;"></i>
+    <h5 style="margin:0 0 6px;color:var(--text);">No Certificates Yet</h5>
+    <p style="margin:0;font-size:13px;">Your calibration certificates will appear here once they are processed.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// =====================================================
+// INSTRUMENT TABLE: filter, sort, paginate
+// =====================================================
+const PAGE_SIZE = 50;
+let currentPage = 1;
+let currentFilter = 'all';
+let sortCol = -1, sortDir = 1;
+
+function getRows() {
+  return Array.from(document.querySelectorAll('#instrBody tr'));
+}
+
+function visibleRows() {
+  const search = (document.getElementById('instrSearch')?.value || '').toLowerCase().trim();
+  return getRows().filter(row => {
+    const statusMatch = currentFilter === 'all' || row.dataset.status === currentFilter;
+    const searchMatch = !search || (row.dataset.search || '').includes(search);
+    return statusMatch && searchMatch;
+  });
+}
+
+function renderTable() {
+  const rows = visibleRows();
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  // Hide all rows first
+  getRows().forEach(r => r.style.display = 'none');
+  // Show only current page of visible rows
+  rows.forEach((r, i) => {
+    r.style.display = (i >= start && i < end) ? '' : 'none';
+  });
+
+  document.getElementById('noInstrMsg').style.display = (total === 0) ? '' : 'none';
+  document.getElementById('instrTable').style.display = (total > 0) ? '' : 'none';
+
+  // Update pager info
+  const showing = Math.min(end, total) - start;
+  document.getElementById('pagerInfo').textContent = total > 0
+    ? `Showing ${start+1}–${Math.min(end, total)} of ${total}`
+    : 'No results';
+
+  // Page number buttons
+  const pn = document.getElementById('pageNums');
+  pn.innerHTML = '';
+  const maxBtns = 7;
+  let startPage = Math.max(1, currentPage - Math.floor(maxBtns/2));
+  let endPage = Math.min(totalPages, startPage + maxBtns - 1);
+  if (endPage - startPage < maxBtns - 1) startPage = Math.max(1, endPage - maxBtns + 1);
+
+  for (let p = startPage; p <= endPage; p++) {
+    const btn = document.createElement('button');
+    btn.className = 'pager-btn' + (p === currentPage ? ' active' : '');
+    btn.textContent = p;
+    btn.onclick = () => { currentPage = p; renderTable(); };
+    pn.appendChild(btn);
+  }
+
+  document.getElementById('prevBtn').disabled = currentPage <= 1;
+  document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+  document.getElementById('pager').style.display = (total > PAGE_SIZE || total > 0) ? 'flex' : 'none';
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  currentPage = 1;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function filterInstruments() { currentPage = 1; renderTable(); }
+function changePage(dir) { currentPage += dir; renderTable(); }
+
+function sortTable(col) {
+  if (sortCol === col) sortDir = -sortDir;
+  else { sortCol = col; sortDir = 1; }
+  document.querySelectorAll('.instr-table th').forEach((th, i) => {
+    th.classList.remove('sort-asc', 'sort-desc');
+    if (i === col) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  });
+  const tbody = document.getElementById('instrBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a, b) => {
+    const av = a.cells[col]?.textContent.trim() || '';
+    const bv = b.cells[col]?.textContent.trim() || '';
+    return av.localeCompare(bv, undefined, {numeric:true}) * sortDir;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  renderTable();
+}
+
+// =====================================================
+// CERT TABLE: status filter
+// =====================================================
+function filterCerts() {
+  const f = document.getElementById('certStatusFilter').value;
+  document.querySelectorAll('#certTable tbody tr').forEach(row => {
+    row.style.display = (f === 'all' || row.dataset.certStatus === f) ? '' : 'none';
+  });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', renderTable);
+</script>
+{% endblock %}

@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}Download Activity — Cal-Asia Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  #dlSearch { background:var(--navy3); border:1px solid var(--border); color:var(--text);
+              border-radius:8px; padding:8px 14px; font-size:13px; min-width:220px; }
+  #dlSearch:focus { border-color:var(--orange); outline:none; }
+  .date-tabs { display:flex; gap:6px; flex-wrap:wrap; }
+  .date-tab { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
+              cursor:pointer; border:1px solid var(--border); background:transparent;
+              color:var(--muted); transition:.15s; }
+  .date-tab.active { background:rgba(34,211,238,.15); border-color:rgba(34,211,238,.4); color:#67e8f9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-download me-2" style="color:#10b981;"></i>Download Activity</h1>
+    <p class="page-sub">Track when customers open their calibration certificates</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('admin_certificates') }}" class="btn btn-glass"><i class="bi bi-arrow-left me-1"></i>Certificates</a>
+    <button onclick="exportDlCSV()" class="btn btn-glass"><i class="bi bi-filetype-csv me-1"></i>Export CSV</button>
+  </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card green">
+      <div class="stat-icon stat-icon-green"><i class="bi bi-download"></i></div>
+      <div class="stat-num">{{ downloads|length }}</div>
+      <div class="stat-label">Total Opens</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card cyan">
+      <div class="stat-icon stat-icon-cyan"><i class="bi bi-file-earmark-text"></i></div>
+      <div class="stat-num">{{ summary|length }}</div>
+      <div class="stat-label">Unique Certs Viewed</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card orange">
+      <div class="stat-icon stat-icon-orange"><i class="bi bi-people"></i></div>
+      <div class="stat-num">{{ downloads|map(attribute='company_name')|unique|list|length }}</div>
+      <div class="stat-label">Unique Customers</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card amber">
+      <div class="stat-icon stat-icon-amber"><i class="bi bi-clock-history"></i></div>
+      <div class="stat-num">{{ downloads[0].downloaded_at.strftime('%d %b') if downloads else '—' }}</div>
+      <div class="stat-label">Last Download</div>
+    </div>
+  </div>
+</div>
+
+<!-- Certificate Download Summary -->
+{% if summary %}
+<div class="card-glass mb-4">
+  <h6 style="font-weight:700;margin-bottom:14px;font-size:14px;"><i class="bi bi-bar-chart me-2" style="color:#22d3ee;"></i>Certificate Download Summary</h6>
+  <div class="table-responsive">
+    <table class="table" style="font-size:13px;">
+      <thead>
+        <tr><th>Certificate No.</th><th>Instrument</th><th>Customer</th><th>Total Opens</th><th>Last Opened</th></tr>
+      </thead>
+      <tbody>
+        {% for s in summary %}
+        <tr>
+          <td><code style="color:#22d3ee;">{{ s.certificate_number }}</code></td>
+          <td>{{ s.instrument_name }}</td>
+          <td style="color:var(--muted);">{{ s.company_name }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="background:rgba(16,185,129,.15);color:#10b981;padding:2px 10px;border-radius:20px;font-weight:600;font-size:12px;">
+                {{ s.total_downloads }} ×
+              </span>
+              <!-- Mini progress bar -->
+              <div style="flex:1;max-width:80px;height:5px;border-radius:3px;background:rgba(255,255,255,.08);">
+                <div style="height:100%;border-radius:3px;background:#10b981;width:{{ [100, (s.total_downloads / (summary[0].total_downloads or 1) * 100)|int]|min }}%;"></div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--muted);font-size:12px;">{{ s.last_download.strftime('%d %b %Y %H:%M') if s.last_download else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Full Activity Log -->
+<div class="card-glass">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <h6 style="font-weight:700;margin:0;font-size:14px;">
+      <i class="bi bi-clock-history me-2" style="color:var(--muted);"></i>Full Download Log
+      <span style="font-size:11px;font-weight:400;color:var(--muted);">(last 200 entries)</span>
+    </h6>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <input id="dlSearch" type="text" placeholder="&#128269; Search customer, cert no., user…" oninput="filterDl()">
+    <select id="dlCustFilter" class="form-select" style="width:auto;min-width:180px;" onchange="filterDl()">
+      <option value="">All Customers</option>
+      {% set seen = [] %}
+      {% for d in downloads %}
+        {% if d.company_name not in seen %}
+          {% set _ = seen.append(d.company_name) %}
+          <option value="{{ d.company_name|lower }}">{{ d.company_name }}</option>
+        {% endif %}
+      {% endfor %}
+    </select>
+    <div class="date-tabs">
+      <button class="date-tab active" onclick="setDateFilter('all', this)">All Time</button>
+      <button class="date-tab" onclick="setDateFilter('today', this)">Today</button>
+      <button class="date-tab" onclick="setDateFilter('week', this)">This Week</button>
+      <button class="date-tab" onclick="setDateFilter('month', this)">This Month</button>
+    </div>
+    <span id="dlCount" style="font-size:12px;color:var(--muted);margin-left:auto;"></span>
+  </div>
+
+  {% if downloads %}
+  <div class="table-responsive">
+    <table class="table" id="dlTable" style="font-size:12.5px;">
+      <thead>
+        <tr>
+          <th>Date &amp; Time</th><th>Customer</th><th>User</th>
+          <th>Certificate No.</th><th>Instrument</th><th>Serial</th><th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody id="dlBody">
+        {% for d in downloads %}
+        <tr data-customer="{{ d.company_name|lower }}"
+            data-date="{{ d.downloaded_at.strftime('%Y-%m-%d') if d.downloaded_at else '' }}"
+            data-search="{{ d.company_name|lower }} {{ d.certificate_number|lower }} {{ (d.customer_name or '')|lower }} {{ (d.username or '')|lower }}">
+          <td style="color:#22d3ee;white-space:nowrap;">{{ d.downloaded_at.strftime('%d %b %Y %H:%M') if d.downloaded_at else '—' }}</td>
+          <td style="font-weight:500;">{{ d.company_name }}</td>
+          <td style="color:var(--muted);">
+            {{ d.customer_name or '—' }}
+            {% if d.username %}<br><span style="font-size:11px;">{{ d.username }}</span>{% endif %}
+          </td>
+          <td><code style="color:#22d3ee;">{{ d.certificate_number }}</code></td>
+          <td>{{ d.instrument_name }}</td>
+          <td><code style="color:#f97316;font-size:11px;">{{ d.serial_number }}</code></td>
+          <td style="color:var(--muted);font-size:11px;">{{ d.ip_address or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:50px;color:var(--muted);">
+    <i class="bi bi-download" style="font-size:40px;display:block;margin-bottom:12px;"></i>
+    <h5 style="margin:0 0 6px;color:var(--text);">No downloads yet</h5>
+    <p style="margin:0;font-size:13px;">Downloads are logged when customers click "Open PDF" on their dashboard.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+let dlDateFilter = 'all';
+function setDateFilter(f, btn) {
+  dlDateFilter = f;
+  document.querySelectorAll('.date-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterDl();
+}
+function filterDl() {
+  const search = document.getElementById('dlSearch').value.toLowerCase();
+  const cust   = document.getElementById('dlCustFilter').value.toLowerCase();
+  const now = new Date();
+  let vis = 0;
+  document.querySelectorAll('#dlBody tr[data-date]').forEach(row => {
+    const sm = !search || (row.dataset.search || '').includes(search);
+    const cm = !cust   || (row.dataset.customer || '').includes(cust);
+    let dm = true;
+    if (dlDateFilter !== 'all' && row.dataset.date) {
+      const d = new Date(row.dataset.date);
+      if (dlDateFilter === 'today') dm = row.dataset.date === now.toISOString().slice(0,10);
+      else if (dlDateFilter === 'week') {
+        const week = new Date(now); week.setDate(week.getDate() - 7);
+        dm = d >= week;
+      } else if (dlDateFilter === 'month') {
+        const month = new Date(now); month.setMonth(month.getMonth() - 1);
+        dm = d >= month;
+      }
+    }
+    row.style.display = (sm && cm && dm) ? '' : 'none';
+    if (sm && cm && dm) vis++;
+  });
+  document.getElementById('dlCount').textContent = `Showing ${vis}`;
+}
+function exportDlCSV() {
+  const rows = Array.from(document.querySelectorAll('#dlBody tr[data-date]'))
+                    .filter(r => r.style.display !== 'none');
+  const headers = ['Date & Time','Customer','User','Certificate No.','Instrument','Serial','IP Address'];
+  const data = rows.map(r => {
+    const cells = r.querySelectorAll('td');
+    return Array.from(cells).map(c => c.textContent.trim().replace(/\s+/g, ' '));
+  });
+  const csv = [headers, ...data].map(r => r.map(v => `"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'download_activity.csv'; a.click();
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const total = document.querySelectorAll('#dlBody tr[data-date]').length;
+  document.getElementById('dlCount').textContent = `Showing ${total}`;
+});
+</script>
+{% endblock %}

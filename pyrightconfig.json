@@ -1,0 +1,13 @@
+{
+  "include": ["calasiacertificates.py", "setup_database.py"],
+  "exclude": ["templates", "templates/**"],
+  "ignore": ["templates/**/*.html"],
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownParameterType": false,
+  "reportUnknownArgumentType": false,
+  "pythonVersion": "3.13",
+  "typeCheckingMode": "off"
+}

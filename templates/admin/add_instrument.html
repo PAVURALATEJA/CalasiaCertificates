@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Add Instrument — Cal-Asia Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><i class="bi bi-cpu me-2" style="color:#22d3ee;"></i>Add New Instrument</h1>
+  <p class="page-sub">The serial number must match the Dropbox PDF filename exactly.</p>
+</div>
+<div class="row">
+  <div class="col-lg-6">
+    <form method="POST">
+      <div class="card-glass">
+        <div class="mb-3">
+          <label class="form-label">Customer <span style="color:#ef4444;">*</span></label>
+          <select name="customer_id" class="form-select" required>
+            <option value="">— Select Customer —</option>
+            {% for c in customers %}
+            <option value="{{ c.id }}">{{ c.company_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Asset Number <span style="color:#ef4444;">*</span>
+            <span style="color:#22d3ee;font-size:11px;">(e.g. DMM-001, PSU-005)</span>
+          </label>
+          <input type="text" name="asset_number" class="form-control"
+                 placeholder="e.g. DMM-001" required/>
+          <div style="font-size:11px;color:#8892a4;margin-top:4px;">
+            Visible to customer on their portal
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Serial Number <span style="color:#ef4444;">*</span>
+            <span style="color:#22d3ee;font-size:11px;">(used in PDF filename)</span>
+          </label>
+          <input type="text" name="serial_number" class="form-control"
+                 placeholder="e.g. FLK87V-001" required
+                 style="font-family:monospace;letter-spacing:.05em;"/>
+          <div style="font-size:11px;color:#8892a4;margin-top:4px;">
+            PDF in Dropbox must be named: <code style="color:#f97316;">FLK87V-001_CERTNUM.pdf</code>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Manufacturer</label>
+            <input type="text" name="manufacturer" class="form-control" placeholder="e.g. Fluke"/>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Model</label>
+            <input type="text" name="model" class="form-control" placeholder="e.g. 87V"/>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Location / Department</label>
+          <input type="text" name="location" class="form-control" placeholder="e.g. Lab A, Floor 3"/>
+        </div>
+        <!-- Hidden instrument_name = same as asset_number for legacy compatibility -->
+        <input type="hidden" name="instrument_name" value=""/>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-orange"><i class="bi bi-check-circle me-1"></i>Save Instrument</button>
+          <a href="{{ url_for('admin_instruments') }}" class="btn btn-glass">Cancel</a>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

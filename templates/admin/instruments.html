@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Instruments — Cal-Asia Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+  #instrAdminSearch { background:var(--navy3); border:1px solid var(--border); color:var(--text);
+                      border-radius:8px; padding:8px 14px; font-size:13px; min-width:220px; }
+  #instrAdminSearch:focus { border-color:var(--orange); outline:none; }
+  .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+  tr.row-overdue td { background:rgba(239,68,68,.04); }
+  tr.row-soon td    { background:rgba(245,158,11,.04); }
+  .cb-del { width:15px; height:15px; cursor:pointer; accent-color:var(--orange); }
+  .days-chip { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; display:inline-block; }
+  .chip-soon    { background:rgba(245,158,11,.18); color:#fcd34d; }
+  .chip-overdue { background:rgba(239,68,68,.18);  color:#fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-cpu me-2" style="color:#22d3ee;"></i>Instruments</h1>
+    <p class="page-sub" id="instrCountLabel">{{ instruments|length }} instrument(s) registered</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('admin_import_excel') }}" class="btn btn-glass"><i class="bi bi-file-earmark-excel me-1" style="color:#10b981;"></i>Import Excel</a>
+    <a href="{{ url_for('admin_add_instrument') }}" class="btn btn-orange"><i class="bi bi-plus-circle me-1"></i>Add Instrument</a>
+  </div>
+</div>
+
+<!-- PDF naming rule -->
+<div class="card-glass mb-4" style="border-left:3px solid #22d3ee;padding:12px 16px;">
+  <i class="bi bi-info-circle me-2" style="color:#22d3ee;"></i>
+  <b>PDF Naming Rule:</b> Upload to Dropbox as
+  <code style="color:#f97316;background:rgba(249,115,22,.1);padding:2px 6px;border-radius:4px;">SERIAL_NUMBER_CERT_NUMBER.pdf</code>
+  — the serial number must match exactly.
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <input id="instrAdminSearch" type="text" placeholder="&#128269; Search asset, serial, customer…" oninput="filterInstrs()">
+  <select id="instrCustFilter" class="form-select" style="width:auto;min-width:180px;" onchange="filterInstrs()">
+    <option value="">All Customers</option>
+    {% set seen = [] %}
+    {% for i in instruments %}
+      {% if i.company_name not in seen %}
+        {% set _ = seen.append(i.company_name) %}
+        <option value="{{ i.company_name|lower }}">{{ i.company_name }}</option>
+      {% endif %}
+    {% endfor %}
+  </select>
+  <select id="instrStatusFilter" class="form-select" style="width:auto;min-width:160px;" onchange="filterInstrs()">
+    <option value="all">All Statuses</option>
+    <option value="calibrated">✅ Calibrated</option>
+    <option value="due_soon">⚠️ Due Soon</option>
+    <option value="overdue">🔴 Overdue</option>
+    <option value="no_cert">⚪ No Certificate</option>
+  </select>
+  <span id="instrVisCount" style="font-size:12px;color:var(--muted);"></span>
+  <!-- Bulk delete -->
+  <form method="POST" id="bulkDelForm" action="{{ url_for('admin_instruments') }}" style="display:none;margin-left:auto;">
+    <button type="submit" class="btn btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);">
+      <i class="bi bi-trash me-1"></i> Delete Selected (<span id="selCount">0</span>)
+    </button>
+  </form>
+</div>
+
+<div class="table-glass">
+  <table class="table" id="instrAdminTable">
+    <thead>
+      <tr>
+        <th style="width:32px;"><input type="checkbox" class="cb-del" id="cbAll" onchange="toggleAll(this)"></th>
+        <th>Status</th>
+        <th>Asset No.</th>
+        <th>Serial Number</th>
+        <th>Customer</th>
+        <th>Model</th>
+        <th>Location</th>
+        <th>Due Date</th>
+        <th>Certs</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="instrAdminBody">
+      {% for i in instruments %}
+      {% if not i.latest_due_date %}
+        {% set s = 'no_cert' %}
+      {% else %}
+        {% set s = cert_status(i.latest_due_date) %}
+      {% endif %}
+      {% set days = ((i.latest_due_date - today).days) if i.latest_due_date else none %}
+      <tr class="{{ 'row-overdue' if s=='overdue' else ('row-soon' if s=='due_soon' else '') }}"
+          data-status="{{ s }}"
+          data-customer="{{ i.company_name|lower }}"
+          data-search="{{ (i.asset_number or '') ~ ' ' ~ i.serial_number ~ ' ' ~ i.company_name ~ ' ' ~ (i.model or '') ~ ' ' ~ (i.location or '') | lower }}">
+        <td><input type="checkbox" class="cb-del cb-row" data-id="{{ i.id }}" onchange="updateSel()"></td>
+        <td>
+          {% if s == 'calibrated' %}
+          <span class="badge-pill badge-calibrated" style="font-size:11px;">✅ OK</span>
+          {% elif s == 'due_soon' %}
+          <span class="badge-pill badge-due_soon" style="font-size:11px;">⚠️ Soon</span>
+          {% elif s == 'overdue' %}
+          <span class="badge-pill badge-overdue" style="font-size:11px;">🔴 Overdue</span>
+          {% else %}
+          <span class="badge-pill" style="background:rgba(75,85,99,.15);color:#9ca3af;border:1px solid rgba(75,85,99,.3);font-size:11px;">⚪ No Cert</span>
+          {% endif %}
+        </td>
+        <td>
+          <b style="color:var(--text);">{{ i.asset_number or '—' }}</b>
+          {% if i.instrument_name and i.instrument_name != i.asset_number %}
+          <div style="font-size:11px;color:var(--muted);">{{ i.instrument_name }}</div>
+          {% endif %}
+        </td>
+        <td><code style="color:#f97316;background:rgba(249,115,22,.08);padding:2px 8px;border-radius:4px;font-size:12px;">{{ i.serial_number }}</code></td>
+        <td style="color:var(--muted);font-size:13px;">{{ i.company_name }}</td>
+        <td style="color:var(--muted);font-size:12px;">{{ i.model or '—' }}</td>
+        <td style="color:var(--muted);font-size:12px;">{{ i.location or '—' }}</td>
+        <td style="font-size:13px;">
+          {% if i.latest_due_date %}
+            {{ i.latest_due_date|dateformat }}
+            {% if days is not none %}
+              {% if days < 0 %}
+                <span class="days-chip chip-overdue">{{ days|abs }}d over</span>
+              {% elif days <= 30 %}
+                <span class="days-chip chip-soon">{{ days }}d</span>
+              {% endif %}
+            {% endif %}
+          {% else %}
+            <span style="color:var(--muted);font-size:12px;">—</span>
+          {% endif %}
+        </td>
+        <td><span class="badge-pill badge-calibrated" style="font-size:11px;">{{ i.cert_count }}</span></td>
+        <td>
+          <form method="POST" action="{{ url_for('admin_delete_instrument', iid=i.id) }}"
+                onsubmit="return confirm('Delete instrument {{ i.asset_number or i.serial_number }}?');" style="display:inline;">
+            <button class="btn btn-sm" style="background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);" title="Delete">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="10" class="text-center" style="color:var(--muted);padding:40px;">
+        No instruments yet. <a href="{{ url_for('admin_add_instrument') }}" style="color:#f97316;">Add one →</a>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+function filterInstrs() {
+  const search = document.getElementById('instrAdminSearch').value.toLowerCase();
+  const cust   = document.getElementById('instrCustFilter').value.toLowerCase();
+  const status = document.getElementById('instrStatusFilter').value;
+  let vis = 0;
+  document.querySelectorAll('#instrAdminBody tr[data-status]').forEach(row => {
+    const sm = !search || (row.dataset.search || '').includes(search);
+    const cm = !cust   || (row.dataset.customer || '').includes(cust);
+    const stm = status === 'all' || row.dataset.status === status;
+    row.style.display = (sm && cm && stm) ? '' : 'none';
+    if (sm && cm && stm) vis++;
+  });
+  document.getElementById('instrVisCount').textContent = `Showing ${vis}`;
+}
+function toggleAll(cb) {
+  document.querySelectorAll('.cb-row').forEach(c => {
+    if (c.closest('tr').style.display !== 'none') c.checked = cb.checked;
+  });
+  updateSel();
+}
+function updateSel() {
+  const sel = document.querySelectorAll('.cb-row:checked').length;
+  document.getElementById('selCount').textContent = sel;
+  document.getElementById('bulkDelForm').style.display = sel > 0 ? '' : 'none';
+}
+window.addEventListener('DOMContentLoaded', () => {
+  const total = document.querySelectorAll('#instrAdminBody tr[data-status]').length;
+  document.getElementById('instrVisCount').textContent = `Showing ${total}`;
+});
+</script>
+{% endblock %}

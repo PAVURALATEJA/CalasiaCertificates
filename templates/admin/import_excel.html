@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Import Instruments from Excel — Cal-Asia Admin{% endblock %}
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
+  <div>
+    <h1 class="page-title"><i class="bi bi-file-earmark-excel me-2" style="color:#10b981;"></i>Bulk Import Instruments</h1>
+    <p class="page-sub">Upload an Excel file to add thousands of instruments at once</p>
+  </div>
+  <a href="{{ url_for('admin_instruments') }}" class="btn btn-glass"><i class="bi bi-arrow-left me-1"></i>Back to Instruments</a>
+</div>
+
+<!-- Instructions -->
+<div class="card-glass mb-4" style="border-left:3px solid #10b981;">
+  <div style="font-weight:600;margin-bottom:12px;color:#10b981;"><i class="bi bi-info-circle me-2"></i>How to Prepare Your Excel File</div>
+  <div class="row g-3" style="font-size:13px;">
+    <div class="col-md-6">
+      <strong style="color:#e2e8f0;">Required Columns (Row 1 = Header):</strong>
+      <table class="table mt-2" style="font-size:12px;">
+        <thead><tr><th>Column Name</th><th>Required?</th><th>Example</th></tr></thead>
+        <tbody>
+          <tr><td><code style="color:#f97316;">company_name</code></td><td><span style="color:#10b981;">✅ Yes</span></td><td>Qualcomm India</td></tr>
+          <tr><td><code style="color:#f97316;">instrument_name</code></td><td><span style="color:#10b981;">✅ Yes</span></td><td>Oscilloscope</td></tr>
+          <tr><td><code style="color:#f97316;">serial_number</code></td><td><span style="color:#10b981;">✅ Yes</span></td><td>B012036</td></tr>
+          <tr><td><code style="color:#f97316;">model</code></td><td><span style="color:#8892a4;">Optional</span></td><td>TAP3500</td></tr>
+          <tr><td><code style="color:#f97316;">manufacturer</code></td><td><span style="color:#8892a4;">Optional</span></td><td>Keysight</td></tr>
+          <tr><td><code style="color:#f97316;">location</code></td><td><span style="color:#8892a4;">Optional</span></td><td>Hyderabad Lab</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col-md-6">
+      <strong style="color:#e2e8f0;">Rules:</strong>
+      <ul style="color:#8892a4;margin-top:8px;padding-left:18px;line-height:2;">
+        <li>File must be <code style="color:#22d3ee;">.xlsx</code> or <code style="color:#22d3ee;">.xls</code></li>
+        <li>First row must be the <b style="color:#e2e8f0;">header row</b> with exact column names</li>
+        <li>If <code style="color:#f97316;">company_name</code> doesn't exist in DB, it will be <b style="color:#10b981;">created automatically</b></li>
+        <li>Instruments with duplicate serial numbers are <b style="color:#22d3ee;">skipped</b> (not overwritten)</li>
+        <li>Empty rows (no company/instrument/serial) are skipped silently</li>
+        <li>You can import any number of rows at once</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Form -->
+<div class="card-glass mb-4">
+  <h6 style="font-weight:600;margin-bottom:16px;"><i class="bi bi-upload me-2" style="color:#f97316;"></i>Upload Excel File</h6>
+  <form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+      <label class="form-label">Select Excel File (.xlsx or .xls)</label>
+      <input type="file" name="excel_file" accept=".xlsx,.xls" required
+             class="form-control" id="excelFileInput"
+             style="cursor:pointer;">
+    </div>
+    <button type="submit" id="importBtn" class="btn btn-orange"
+            style="padding:10px 28px;"
+            onclick="this.textContent='Importing... Please wait'; this.disabled=true; this.form.submit();">
+      <i class="bi bi-cloud-upload me-2"></i>Import Instruments
+    </button>
+  </form>
+</div>
+
+<!-- Results -->
+{% if results %}
+<div class="card-glass" style="border-left:3px solid {% if results.errors == 0 %}#10b981{% else %}#f59e0b{% endif %};">
+  <h6 style="font-weight:600;margin-bottom:14px;color:{% if results.errors == 0 %}#10b981{% else %}#f59e0b{% endif %};">
+    <i class="bi bi-{% if results.errors == 0 %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>Import Results
+  </h6>
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div style="background:#0f1629;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:#10b981;">{{ results.added }}</div>
+        <div style="font-size:12px;color:#8892a4;">Instruments Added</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div style="background:#0f1629;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:#22d3ee;">{{ results.skipped }}</div>
+        <div style="font-size:12px;color:#8892a4;">Skipped / Duplicates</div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div style="background:#0f1629;border-radius:10px;padding:16px;text-align:center;">
+        <div style="font-size:32px;font-weight:700;color:#ef4444;">{{ results.errors }}</div>
+        <div style="font-size:12px;color:#8892a4;">Errors</div>
+      </div>
+    </div>
+  </div>
+  {% if results.error_details %}
+  <div style="background:#0f1629;border-radius:8px;padding:12px;font-size:12px;color:#fca5a5;max-height:200px;overflow-y:auto;">
+    <strong>Error Details:</strong><br>
+    {% for e in results.error_details %}
+    {{ e }}<br>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% if results.added > 0 %}
+  <a href="{{ url_for('admin_instruments') }}" class="btn btn-orange mt-3">
+    <i class="bi bi-cpu me-2"></i>View All Instruments
+  </a>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

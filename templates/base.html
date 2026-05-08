@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Cal-Asia Certificates{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy:     #0a0f1e;
+      --navy2:    #0f1629;
+      --navy3:    #141d35;
+      --card:     #1a2340;
+      --border:   #1e2d50;
+      --orange:   #f97316;
+      --orange2:  #ea580c;
+      --cyan:     #22d3ee;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --amber:    #f59e0b;
+      --text:     #e2e8f0;
+      --muted:    #8892a4;
+      --sidebar-w: 240px;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: var(--navy); color: var(--text); min-height: 100vh; margin: 0; }
+
+    /* ---- Sidebar ---- */
+    .sidebar {
+      position: fixed; top:0; left:0; width: var(--sidebar-w); height: 100vh;
+      background: var(--navy2); border-right: 1px solid var(--border);
+      display:flex; flex-direction:column; z-index:100; overflow-y:auto;
+    }
+    .sidebar-logo {
+      padding: 20px 16px; display:flex; align-items:center; gap:10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .logo-icon {
+      width:36px; height:36px; background: linear-gradient(135deg,var(--orange),var(--orange2));
+      border-radius:8px; display:flex; align-items:center; justify-content:center;
+      font-size:16px; color:#fff; flex-shrink:0;
+    }
+    .sidebar-logo .logo-text { font-weight:700; font-size:15px; line-height:1.2; }
+    .sidebar-logo .logo-sub  { font-size:10px; color:var(--muted); }
+    .sidebar-role {
+      margin: 12px 16px 8px; font-size:10px; font-weight:600; letter-spacing:.08em;
+      text-transform:uppercase; color:var(--muted);
+    }
+    .sidebar-nav { list-style:none; padding:0 8px; margin:0; flex:1; }
+    .sidebar-nav li a {
+      display:flex; align-items:center; gap:10px; padding:9px 12px;
+      border-radius:8px; color:var(--muted); text-decoration:none;
+      font-size:13.5px; font-weight:500; transition:.2s;
+    }
+    .sidebar-nav li a:hover, .sidebar-nav li a.active {
+      background: var(--navy3); color: var(--text);
+    }
+    .sidebar-nav li a.active i { color: var(--orange); }
+    .sidebar-nav li a i { font-size:16px; width:20px; text-align:center; }
+    .sidebar-footer {
+      padding: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--muted);
+    }
+    .sidebar-footer .user-name { font-weight:600; color:var(--text); }
+    .sidebar-footer .badge-role {
+      display:inline-block; padding:2px 8px; border-radius:20px;
+      font-size:10px; font-weight:600; text-transform:uppercase;
+      background:rgba(249,115,22,.15); color:var(--orange); margin-top:2px;
+    }
+
+    /* ---- Main ---- */
+    .main-content { margin-left: var(--sidebar-w); padding: 28px 32px; min-height:100vh; }
+    .page-header { margin-bottom:24px; }
+    .page-title { font-size:22px; font-weight:700; margin:0; }
+    .page-sub   { color:var(--muted); font-size:13px; margin:4px 0 0; }
+
+    /* ---- Cards ---- */
+    .card-glass {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius:12px; padding:20px;
+    }
+    .stat-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius:12px; padding:18px 20px; position:relative; overflow:hidden;
+    }
+    .stat-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    }
+    .stat-card.orange::before { background: var(--orange); }
+    .stat-card.cyan::before   { background: var(--cyan); }
+    .stat-card.green::before  { background: var(--green); }
+    .stat-card.red::before    { background: var(--red); }
+    .stat-card.amber::before  { background: var(--amber); }
+    .stat-card .stat-icon {
+      width:42px; height:42px; border-radius:10px; display:flex;
+      align-items:center; justify-content:center; font-size:18px; margin-bottom:10px;
+    }
+    .stat-icon-orange { background:rgba(249,115,22,.15); color:var(--orange); }
+    .stat-icon-cyan   { background:rgba(34,211,238,.15);  color:var(--cyan); }
+    .stat-icon-green  { background:rgba(16,185,129,.15);  color:var(--green); }
+    .stat-icon-red    { background:rgba(239,68,68,.15);   color:var(--red); }
+    .stat-icon-amber  { background:rgba(245,158,11,.15);  color:var(--amber); }
+    .stat-num  { font-size:28px; font-weight:700; line-height:1; }
+    .stat-label{ font-size:12px; color:var(--muted); margin-top:4px; }
+
+    /* ---- Table ---- */
+    .table-glass { background:var(--card); border-radius:12px; overflow:hidden; border:1px solid var(--border); }
+    .table { color:var(--text); margin:0; }
+    .table thead th { background:var(--navy3); border-color:var(--border); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); padding:12px 14px; }
+    .table tbody tr { border-color:var(--border); }
+    .table tbody tr:hover { background:rgba(255,255,255,.03); }
+    .table td { padding:11px 14px; font-size:13.5px; vertical-align:middle; border-color:var(--border); }
+
+    /* ---- Badges ---- */
+    .badge-calibrated { background:rgba(16,185,129,.15); color:var(--green); border:1px solid rgba(16,185,129,.3); }
+    .badge-due_soon   { background:rgba(245,158,11,.15); color:var(--amber); border:1px solid rgba(245,158,11,.3); }
+    .badge-overdue    { background:rgba(239,68,68,.15);  color:var(--red);   border:1px solid rgba(239,68,68,.3); }
+    .badge-dropbox    { background:rgba(34,211,238,.12); color:var(--cyan);  border:1px solid rgba(34,211,238,.25); }
+    .badge-manual     { background:rgba(249,115,22,.12); color:var(--orange);border:1px solid rgba(249,115,22,.25); }
+    .badge-danger     { background:rgba(239,68,68,.15);   color:var(--red);   border:1px solid rgba(239,68,68,.3); }
+    .badge-pill { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+
+    /* ---- Buttons ---- */
+    .btn-orange { background:var(--orange); border:none; color:#fff; font-weight:600; transition:.2s; }
+    .btn-orange:hover { background:var(--orange2); color:#fff; }
+    .btn-glass  { background:rgba(255,255,255,.06); border:1px solid var(--border); color:var(--text); }
+    .btn-glass:hover { background:rgba(255,255,255,.1); color:#fff; }
+    .btn-amber  { background:rgba(245,158,11,.18); border:1px solid rgba(245,158,11,.5); color:#fcd34d; font-weight:600; transition:.2s; }
+    .btn-amber:hover { background:rgba(245,158,11,.32); border-color:var(--amber); color:#fff; }
+    /* Override Bootstrap outline-warning for dark theme */
+    .btn-outline-warning { background:rgba(245,158,11,.18) !important; border:1px solid rgba(245,158,11,.6) !important; color:#fcd34d !important; font-weight:600; }
+    .btn-outline-warning:hover { background:rgba(245,158,11,.35) !important; color:#fff !important; }
+
+    /* ---- Form ---- */
+    .form-control, .form-select {
+      background:var(--navy3); border:1px solid var(--border);
+      color:var(--text); border-radius:8px;
+    }
+    .form-control:focus, .form-select:focus {
+      background:var(--navy3); border-color:var(--orange);
+      color:var(--text); box-shadow:0 0 0 3px rgba(249,115,22,.15);
+    }
+    .form-label { font-size:13px; font-weight:500; color:var(--muted); }
+
+    /* ---- Toast-style flashes ---- */
+    .flash-container { position:fixed; top:20px; right:20px; z-index:9999; width:320px; }
+    .flash-item {
+      padding:12px 16px; border-radius:10px; margin-bottom:8px;
+      font-size:13px; backdrop-filter:blur(10px);
+      border: 1px solid rgba(255,255,255,.08); animation: slideIn .3s ease;
+    }
+    @keyframes slideIn { from { transform:translateX(30px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+    .flash-success { background:rgba(16,185,129,.15); border-color:rgba(16,185,129,.3); color:#6ee7b7; }
+    .flash-danger  { background:rgba(239,68,68,.15);  border-color:rgba(239,68,68,.3);   color:#fca5a5; }
+    .flash-warning { background:rgba(245,158,11,.15); border-color:rgba(245,158,11,.3);  color:#fcd34d; }
+    .flash-info    { background:rgba(34,211,238,.12); border-color:rgba(34,211,238,.25); color:#67e8f9; }
+
+    /* ---- Sync status banner ---- */
+    .sync-banner {
+      background: linear-gradient(135deg, rgba(34,211,238,.1), rgba(249,115,22,.1));
+      border: 1px solid var(--border); border-radius:12px; padding:16px 20px;
+    }
+
+    /* ---- Scrollbar ---- */
+    ::-webkit-scrollbar { width:6px; height:6px; }
+    ::-webkit-scrollbar-track { background:transparent; }
+    ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+    /* No sidebar pages */
+    .full-page { display:flex; min-height:100vh; align-items:center; justify-content:center; background:var(--navy); }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-container">
+    {% for cat, msg in messages %}
+    <div class="flash-item flash-{{ cat }}">
+      <i class="bi bi-{% if cat=='success' %}check-circle{% elif cat=='danger' %}x-circle{% elif cat=='warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+      {{ msg }}
+    </div>
+    {% endfor %}
+  </div>
+  <script>setTimeout(()=>{document.querySelectorAll('.flash-item').forEach(el=>el.remove())},5000)</script>
+  {% endif %}
+{% endwith %}
+
+{% if current_user.is_authenticated %}
+<!-- ===== SIDEBAR ===== -->
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><i class="bi bi-shield-check"></i></div>
+    <div>
+      <div class="logo-text">Cal-Asia</div>
+      <div class="logo-sub">Certificate Portal</div>
+    </div>
+  </div>
+
+  {% if current_user.role == 'admin' %}
+  <div class="sidebar-role">Admin Panel</div>
+  <ul class="sidebar-nav">
+    <li><a href="{{ url_for('admin_dashboard') }}" class="{{ 'active' if (request.endpoint or '')==  'admin_dashboard' }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li><a href="{{ url_for('admin_customers') }}" class="{{ 'active' if 'customer' in (request.endpoint or '') }}"><i class="bi bi-building"></i> Customers</a></li>
+    <li><a href="{{ url_for('admin_instruments') }}" class="{{ 'active' if 'instrument' in (request.endpoint or '') }}"><i class="bi bi-cpu"></i> Instruments</a></li>
+    <li><a href="{{ url_for('admin_import_excel') }}" class="{{ 'active' if (request.endpoint or '')=='admin_import_excel' }}" style="color:#10b981;"><i class="bi bi-file-earmark-excel" style="color:#10b981;"></i> Import Excel</a></li>
+    <li><a href="{{ url_for('admin_certificates') }}" class="{{ 'active' if (request.endpoint or '')=='admin_certificates' }}"><i class="bi bi-file-earmark-text"></i> Certificates</a></li>
+    <li><a href="{{ url_for('admin_downloads') }}" class="{{ 'active' if (request.endpoint or '')=='admin_downloads' }}"><i class="bi bi-download"></i> Downloads</a></li>
+    <li><a href="{{ url_for('admin_users') }}" class="{{ 'active' if 'user' in (request.endpoint or '') }}"><i class="bi bi-people"></i> Users</a></li>
+    <li><a href="{{ url_for('sync_report') }}" class="{{ 'active' if (request.endpoint or '')=='sync_report' }}" style="color:var(--cyan)"><i class="bi bi-cloud-arrow-down" style="color:var(--cyan)"></i> Dropbox Sync</a></li>
+  </ul>
+
+  {% elif current_user.role == 'manager' %}
+  <div class="sidebar-role">Manager Panel</div>
+  <ul class="sidebar-nav">
+    <li><a href="{{ url_for('manager_dashboard') }}" class="{{ 'active' if request.endpoint=='manager_dashboard' }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
+    <li><a href="{{ url_for('sync_report') }}" class="{{ 'active' if request.endpoint=='sync_report' }}" style="color:var(--cyan)"><i class="bi bi-cloud-arrow-down" style="color:var(--cyan)"></i> Sync Dropbox</a></li>
+  </ul>
+
+  {% elif current_user.role == 'customer' %}
+  <div class="sidebar-role">Customer Portal</div>
+  <ul class="sidebar-nav">
+    <li><a href="{{ url_for('customer_dashboard') }}" class="{{ 'active' if request.endpoint=='customer_dashboard' }}"><i class="bi bi-file-earmark-medical"></i> My Certificates</a></li>
+    <li><a href="{{ url_for('customer_change_password') }}" class="{{ 'active' if request.endpoint=='customer_change_password' }}" style="color:#f59e0b;"><i class="bi bi-shield-lock" style="color:#f59e0b;"></i> Change Password</a></li>
+  </ul>
+  {% endif %}
+
+  <div class="sidebar-footer">
+    <div class="user-name"><i class="bi bi-person-circle me-1"></i>{{ current_user.full_name }}</div>
+    <div class="badge-role">{{ current_user.role }}</div>
+    <div class="mt-2">
+      <a href="{{ url_for('logout') }}" class="btn btn-sm btn-glass w-100 mt-1"><i class="bi bi-box-arrow-left me-1"></i>Logout</a>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<div class="main-content">
+  {% block content %}{% endblock %}
+</div>
+
+{% else %}
+{% block nocontent %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
