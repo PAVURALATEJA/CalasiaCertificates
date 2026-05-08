@@ -40,6 +40,11 @@ def _get_env(key: str, default: str = '') -> str:
 # APP SETUP
 # =============================================================================
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template("login.html")
+
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'calasia-default-secret-2025')
 
 # =============================================================================
