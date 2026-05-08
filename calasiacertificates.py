@@ -50,21 +50,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'calasia-default-secret-
 # =============================================================================
 # DATABASE HELPERS
 # =============================================================================
-print("DB_HOST =", os.environ.get("DB_HOST"))
-print("DB_NAME =", os.environ.get("DB_NAME"))
-print("DB_USER =", os.environ.get("DB_USER"))
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DB_CONFIG = {
-    'host':     os.environ.get('DB_HOST', 'localhost'),
-    'database': os.environ.get('DB_NAME', 'calasia_certs'),
-    'user':     os.environ.get('DB_USER', 'postgres'),
-    'password': os.environ.get('DB_PASSWORD', 'Calasia@2025'),
-    'port':     os.environ.get('DB_PORT', '5432'),
-}
+print("DATABASE_URL =", DATABASE_URL)
 
 
 def get_db():
-    return psycopg2.connect(**DB_CONFIG)
+    return psycopg2.connect(DATABASE_URL)
 
 
 def db_query(sql: str, params: Any = None, fetch: str = 'all') -> Any:
