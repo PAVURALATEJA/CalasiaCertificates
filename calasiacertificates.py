@@ -207,6 +207,22 @@ def create_tables():
         )
         """)
 
+        # 8. certificate_downloads
+        cur.execute("""
+        CREATE TABLE IF NOT EXISTS certificate_downloads (
+            id SERIAL PRIMARY KEY,
+            certificate_id INTEGER,
+            user_id INTEGER,
+            downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """)
+
+        # Add missing columns to users table
+        cur.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS plain_password VARCHAR(255)
+        """)
+
         conn.commit()
         print("[STARTUP] All tables verified/created successfully.")
     except Exception as e:
