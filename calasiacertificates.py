@@ -213,6 +213,7 @@ def create_tables():
             id SERIAL PRIMARY KEY,
             certificate_id INTEGER,
             user_id INTEGER,
+            ip_address VARCHAR(50),
             downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -221,6 +222,16 @@ def create_tables():
         cur.execute("""
         ALTER TABLE users
         ADD COLUMN IF NOT EXISTS plain_password VARCHAR(255)
+        """)
+        cur.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        """)
+
+        # Add missing columns to certificate_downloads table
+        cur.execute("""
+        ALTER TABLE certificate_downloads
+        ADD COLUMN IF NOT EXISTS ip_address VARCHAR(50)
         """)
 
         conn.commit()
@@ -1018,7 +1029,9 @@ def admin_import_excel():
 def admin_users():
     users = db_query("""
         SELECT u.id, u.username, u.full_name, u.role, u.email,
-               u.is_active, u.created_at, u.plain_password, cu.company_name
+               u.is_active,
+               COALESCE(u.created_at, NOW()) AS created_at,
+               u.plain_password, cu.company_name
         FROM users u
         LEFT JOIN customers cu ON cu.id = u.customer_id
         WHERE u.is_active = TRUE AND u.role != 'admin'
@@ -1301,7 +1314,8 @@ def admin_edit_certificate(cert_id):
 @role_required('admin')
 def admin_downloads():
     downloads = db_query("""
-        SELECT cd.id, cd.downloaded_at, cd.ip_address,
+        SELECT cd.id, cd.downloaded_at,
+               COALESCE(cd.ip_address, 'N/A') AS ip_address,
                c.certificate_number,
                i.instrument_name, i.serial_number,
                cu.company_name,
