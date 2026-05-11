@@ -130,6 +130,13 @@ CREATE TABLE IF NOT EXISTS duplicate_files (
     resolved           BOOLEAN DEFAULT FALSE,
     detected_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS certificate_downloads (
+    id SERIAL PRIMARY KEY,
+    certificate_id INTEGER,
+    downloaded_by VARCHAR(255),
+    downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 try:
@@ -138,6 +145,16 @@ try:
 except Exception as e:
     print(f"    [ERROR] creating tables: {e}")
     exit(1)
+
+# Add missing columns to users table if they don't exist
+try:
+    cur.execute("""
+        ALTER TABLE users
+        ADD COLUMN IF NOT EXISTS plain_password VARCHAR(255)
+    """)
+    print("    [OK] Added missing 'plain_password' column to users table!")
+except Exception as e:
+    print(f"    [WARNING] Adding plain_password column: {e}")
 
 # Step 3: Create default admin user
 print("\n[3] Creating default admin user...")
