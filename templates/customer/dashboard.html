@@ -4,94 +4,287 @@
 {% block extra_css %}
 <style>
   /* ---- Status dot ---- */
-  .status-dot { display:inline-block; width:9px; height:9px; border-radius:50%; flex-shrink:0; }
-  .dot-green  { background:#10b981; box-shadow:0 0 6px rgba(16,185,129,.6); }
-  .dot-amber  { background:#f59e0b; box-shadow:0 0 6px rgba(245,158,11,.6); }
-  .dot-red    { background:#ef4444; box-shadow:0 0 6px rgba(239,68,68,.6); }
-  .dot-grey   { background:#4b5563; }
+  .status-dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .dot-green {
+    background: #10b981;
+    box-shadow: 0 0 6px rgba(16, 185, 129, .6);
+  }
+
+  .dot-amber {
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, .6);
+  }
+
+  .dot-red {
+    background: #ef4444;
+    box-shadow: 0 0 6px rgba(239, 68, 68, .6);
+  }
+
+  .dot-grey {
+    background: #4b5563;
+  }
 
   /* ---- Black text for table data ---- */
-  .data-text   { color:#1e293b !important; font-weight:600; }
-  .data-muted  { color:#374151 !important; font-size:13px; }
-  .data-code   { color:#1e293b !important; font-size:12px; font-family:monospace; font-weight:600; }
-  .table tbody td { color:#1e293b !important; }
+  .data-text {
+    color: #1e293b !important;
+    font-weight: 600;
+  }
+
+  .data-muted {
+    color: #374151 !important;
+    font-size: 13px;
+  }
+
+  .data-code {
+    color: #1e293b !important;
+    font-size: 12px;
+    font-family: monospace;
+    font-weight: 600;
+  }
+
+  .table tbody td {
+    color: #1e293b !important;
+  }
 
   /* ---- Filter Tabs ---- */
-  .filter-tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-  .filter-tab {
-    padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
-    cursor:pointer; border:1px solid var(--border);
-    background:transparent; color:var(--muted); transition:.15s;
-    user-select:none;
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
   }
-  .filter-tab:hover { background:rgba(255,255,255,.06); color:var(--text); }
-  .filter-tab.active { color:#fff; border-color:transparent; }
-  .filter-tab.tab-all.active    { background:rgba(255,255,255,.12); }
-  .filter-tab.tab-ok.active     { background:rgba(16,185,129,.25); border-color:rgba(16,185,129,.4); color:#6ee7b7; }
-  .filter-tab.tab-soon.active   { background:rgba(245,158,11,.2); border-color:rgba(245,158,11,.4); color:#fcd34d; }
-  .filter-tab.tab-overdue.active{ background:rgba(239,68,68,.2); border-color:rgba(239,68,68,.4); color:#fca5a5; }
-  .filter-tab.tab-nocert.active { background:rgba(139,92,246,.2); border-color:rgba(139,92,246,.4); color:#c4b5fd; }
+
+  .filter-tab {
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: .15s;
+    user-select: none;
+  }
+
+  .filter-tab:hover {
+    background: rgba(255, 255, 255, .06);
+    color: var(--text);
+  }
+
+  .filter-tab.active {
+    color: #fff;
+    border-color: transparent;
+  }
+
+  .filter-tab.tab-all.active {
+    background: rgba(255, 255, 255, .12);
+  }
+
+  .filter-tab.tab-ok.active {
+    background: rgba(16, 185, 129, .25);
+    border-color: rgba(16, 185, 129, .4);
+    color: #6ee7b7;
+  }
+
+  .filter-tab.tab-soon.active {
+    background: rgba(245, 158, 11, .2);
+    border-color: rgba(245, 158, 11, .4);
+    color: #fcd34d;
+  }
+
+  .filter-tab.tab-overdue.active {
+    background: rgba(239, 68, 68, .2);
+    border-color: rgba(239, 68, 68, .4);
+    color: #fca5a5;
+  }
+
+  .filter-tab.tab-nocert.active {
+    background: rgba(139, 92, 246, .2);
+    border-color: rgba(139, 92, 246, .4);
+    color: #c4b5fd;
+  }
 
   /* ---- Instrument table ---- */
-  #instrSearch { background:var(--navy3); border:1px solid var(--border); color:var(--text);
-                 border-radius:8px; padding:8px 14px; font-size:13px; width:100%; max-width:320px; }
-  #instrSearch:focus { border-color:var(--orange); outline:none; box-shadow:0 0 0 3px rgba(249,115,22,.12); }
-  .instr-table th { cursor:pointer; user-select:none; }
-  .instr-table th:hover { color:var(--text) !important; }
-  .instr-table th .sort-icon { font-size:10px; margin-left:4px; opacity:.5; }
-  .sort-asc .sort-icon::after  { content:'▲'; }
-  .sort-desc .sort-icon::after { content:'▼'; }
+  #instrSearch {
+    background: var(--navy3);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  #instrSearch:focus {
+    border-color: var(--orange);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .12);
+  }
+
+  .instr-table th {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .instr-table th:hover {
+    color: var(--text) !important;
+  }
+
+  .instr-table th .sort-icon {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: .5;
+  }
+
+  .sort-asc .sort-icon::after {
+    content: '▲';
+  }
+
+  .sort-desc .sort-icon::after {
+    content: '▼';
+  }
 
   /* ---- Pagination ---- */
-  .pager { display:flex; align-items:center; gap:6px; margin-top:14px; flex-wrap:wrap; }
-  .pager-btn {
-    padding:5px 12px; border-radius:7px; border:1px solid var(--border);
-    background:rgba(255,255,255,.05); color:var(--muted); font-size:12px;
-    cursor:pointer; transition:.15s;
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    flex-wrap: wrap;
   }
-  .pager-btn:hover { background:rgba(255,255,255,.1); color:#fff; }
-  .pager-btn.active { background:var(--orange); border-color:var(--orange); color:#fff; }
-  .pager-btn:disabled { opacity:.35; cursor:not-allowed; }
-  .pager-info { font-size:12px; color:var(--muted); margin-left:auto; }
+
+  .pager-btn {
+    padding: 5px 12px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, .05);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    transition: .15s;
+  }
+
+  .pager-btn:hover {
+    background: rgba(255, 255, 255, .1);
+    color: #fff;
+  }
+
+  .pager-btn.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: #fff;
+  }
+
+  .pager-btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+  }
+
+  .pager-info {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: auto;
+  }
 
   /* ---- Summary pill row ---- */
-  .summary-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
-  .summary-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:5px 14px; border-radius:20px; font-size:12px; font-weight:600;
-    border:1px solid;
+  .summary-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
   }
-  .sp-green { background:rgba(16,185,129,.12); border-color:rgba(16,185,129,.3); color:#6ee7b7; }
-  .sp-amber { background:rgba(245,158,11,.12); border-color:rgba(245,158,11,.3); color:#fcd34d; }
-  .sp-red   { background:rgba(239,68,68,.12);  border-color:rgba(239,68,68,.3);  color:#fca5a5; }
-  .sp-grey  { background:rgba(75,85,99,.15);   border-color:rgba(75,85,99,.4);   color:#9ca3af; }
+
+  .summary-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+
+  .sp-green {
+    background: rgba(16, 185, 129, .12);
+    border-color: rgba(16, 185, 129, .3);
+    color: #6ee7b7;
+  }
+
+  .sp-amber {
+    background: rgba(245, 158, 11, .12);
+    border-color: rgba(245, 158, 11, .3);
+    color: #fcd34d;
+  }
+
+  .sp-red {
+    background: rgba(239, 68, 68, .12);
+    border-color: rgba(239, 68, 68, .3);
+    color: #fca5a5;
+  }
+
+  .sp-grey {
+    background: rgba(75, 85, 99, .15);
+    border-color: rgba(75, 85, 99, .4);
+    color: #9ca3af;
+  }
 
   /* ---- Cert table row highlight ---- */
-  tr.row-overdue td { background:rgba(239,68,68,.04); }
-  tr.row-soon td    { background:rgba(245,158,11,.04); }
+  tr.row-overdue td {
+    background: rgba(239, 68, 68, .04);
+  }
+
+  tr.row-soon td {
+    background: rgba(245, 158, 11, .04);
+  }
 
   /* ---- Days chip ---- */
-  .days-chip { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; display:inline-block; }
-  .chip-soon   { background:rgba(245,158,11,.18); color:#fcd34d; }
-  .chip-overdue{ background:rgba(239,68,68,.18);  color:#fca5a5; }
+  .days-chip {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    display: inline-block;
+  }
+
+  .chip-soon {
+    background: rgba(245, 158, 11, .18);
+    color: #fcd34d;
+  }
+
+  .chip-overdue {
+    background: rgba(239, 68, 68, .18);
+    color: #fca5a5;
+  }
 
   /* ---- Section anchor scroll offset ---- */
-  #instruments { scroll-margin-top: 24px; }
+  #instruments {
+    scroll-margin-top: 24px;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header d-flex justify-content-between align-items-start flex-wrap gap-2">
   <div>
-    <h1 class="page-title"><i class="bi bi-file-earmark-medical me-2" style="color:#10b981;"></i>My Calibration Certificates</h1>
+    <h1 class="page-title"><i class="bi bi-file-earmark-medical me-2" style="color:#10b981;"></i>My Calibration
+      Certificates</h1>
     <p class="page-sub">{{ customer.company_name if customer else '' }} — Certificate Portal</p>
   </div>
   <!-- Search -->
   <form method="get" style="display:flex;gap:8px;align-items:center;">
     <div class="input-group" style="max-width:380px;">
-      <input type="text" name="search" class="form-control"
-             placeholder="Search certificate, asset or serial…"
-             value="{{ request.args.get('search', '') }}">
+      <input type="text" name="search" class="form-control" placeholder="Search certificate, asset or serial…"
+        value="{{ request.args.get('search', '') }}">
       <button class="btn btn-orange" type="submit"><i class="bi bi-search"></i></button>
       {% if request.args.get('search') %}
       <a href="{{ url_for('customer_dashboard') }}" class="btn btn-glass" title="Clear"><i class="bi bi-x"></i></a>
@@ -106,10 +299,10 @@
 {% set due_soon_list = [] %}
 {% set calibrated_list = [] %}
 {% for c in certs %}
-  {% set s = cert_status(c.due_date) %}
-  {% if s == 'overdue' %}{% set _ = overdue_list.append(1) %}
-  {% elif s == 'due_soon' %}{% set _ = due_soon_list.append(1) %}
-  {% else %}{% set _ = calibrated_list.append(1) %}{% endif %}
+{% set s = cert_status(c.due_date) %}
+{% if s == 'overdue' %}{% set _ = overdue_list.append(1) %}
+{% elif s == 'due_soon' %}{% set _ = due_soon_list.append(1) %}
+{% else %}{% set _ = calibrated_list.append(1) %}{% endif %}
 {% endfor %}
 {% set overdue = overdue_list|length %}
 {% set due_soon = due_soon_list|length %}
@@ -150,10 +343,11 @@
 <div id="certs" class="card-glass mb-4">
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 style="font-weight:700;margin:0;font-size:14px;">
-      <i class="bi bi-list-ul me-2" style="color:#f97316;"></i>All My Certificates
+      <i class="bi bi-list-ul me-2" style="color:#f97316;"></i>Calibrated Certificates
     </h6>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <select id="certStatusFilter" class="form-select form-select-sm" style="width:auto;min-width:140px;" onchange="filterCerts()">
+      <select id="certStatusFilter" class="form-select form-select-sm" style="width:auto;min-width:140px;"
+        onchange="filterCerts()">
         <option value="all">All Statuses</option>
         <option value="calibrated">✅ Calibrated</option>
         <option value="due_soon">⚠️ Due Soon</option>
@@ -182,7 +376,7 @@
         {% set s = cert_status(c.due_date) %}
         {% set days_diff = (c.due_date - today).days %}
         <tr class="{{ 'row-overdue' if s=='overdue' else ('row-soon' if s=='due_soon' else '') }}"
-            data-cert-status="{{ s }}">
+          data-cert-status="{{ s }}">
           <td><span class="data-code">{{ c.certificate_number }}</span></td>
           <td><span class="data-text">{{ c.asset_number or '—' }}</span></td>
           <td><span class="data-code">{{ c.serial_number }}</span></td>
@@ -205,10 +399,9 @@
           </td>
           <td>
             {% if c.dropbox_file_path or c.dropbox_shared_link %}
-            <a href="{{ url_for('customer_open_certificate', cert_id=c.id) }}"
-               class="btn btn-sm"
-               style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);font-weight:600;white-space:nowrap;"
-               target="_blank">
+            <a href="{{ url_for('customer_open_certificate', cert_id=c.id) }}" class="btn btn-sm"
+              style="background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);font-weight:600;white-space:nowrap;"
+              target="_blank">
               <i class="bi bi-file-pdf me-1"></i>Open PDF
             </a>
             {% else %}
@@ -234,13 +427,13 @@
 {% set instr_total = instruments|length %}
 {% set instr_ok = [] %}{% set instr_soon = [] %}{% set instr_ov = [] %}{% set instr_nc = [] %}
 {% for i in instruments %}
-  {% if not i.latest_due_date %}{% set _ = instr_nc.append(1) %}
-  {% else %}
-    {% set s = cert_status(i.latest_due_date) %}
-    {% if s == 'calibrated' %}{% set _ = instr_ok.append(1) %}
-    {% elif s == 'due_soon' %}{% set _ = instr_soon.append(1) %}
-    {% else %}{% set _ = instr_ov.append(1) %}{% endif %}
-  {% endif %}
+{% if not i.latest_due_date %}{% set _ = instr_nc.append(1) %}
+{% else %}
+{% set s = cert_status(i.latest_due_date) %}
+{% if s == 'calibrated' %}{% set _ = instr_ok.append(1) %}
+{% elif s == 'due_soon' %}{% set _ = instr_soon.append(1) %}
+{% else %}{% set _ = instr_ov.append(1) %}{% endif %}
+{% endif %}
 {% endfor %}
 
 <div id="instruments" class="card-glass mb-4">
@@ -255,22 +448,29 @@
 
   <!-- Summary pills -->
   <div class="summary-row">
-    <span class="summary-pill sp-green"><span class="status-dot dot-green"></span> {{ instr_ok|length }} Calibrated</span>
-    <span class="summary-pill sp-amber"><span class="status-dot dot-amber"></span> {{ instr_soon|length }} Due Soon</span>
+    <span class="summary-pill sp-green"><span class="status-dot dot-green"></span> {{ instr_ok|length }}
+      Calibrated</span>
+    <span class="summary-pill sp-amber"><span class="status-dot dot-amber"></span> {{ instr_soon|length }} Due
+      Soon</span>
     <span class="summary-pill sp-red"><span class="status-dot dot-red"></span> {{ instr_ov|length }} Overdue</span>
     {% if instr_nc|length > 0 %}
-    <span class="summary-pill sp-grey"><span class="status-dot dot-grey"></span> {{ instr_nc|length }} No Certificate</span>
+    <span class="summary-pill sp-grey"><span class="status-dot dot-grey"></span> {{ instr_nc|length }} No
+      Certificate</span>
     {% endif %}
   </div>
 
   <!-- Filter Tabs -->
   <div class="filter-tabs">
     <button class="filter-tab tab-all active" onclick="setFilter('all', this)">All ({{ instr_total }})</button>
-    <button class="filter-tab tab-ok"   onclick="setFilter('calibrated', this)">✅ Calibrated ({{ instr_ok|length }})</button>
-    <button class="filter-tab tab-soon" onclick="setFilter('due_soon', this)">⚠️ Due Soon ({{ instr_soon|length }})</button>
-    <button class="filter-tab tab-overdue" onclick="setFilter('overdue', this)">🔴 Overdue ({{ instr_ov|length }})</button>
+    <button class="filter-tab tab-ok" onclick="setFilter('calibrated', this)">✅ Calibrated ({{ instr_ok|length
+      }})</button>
+    <button class="filter-tab tab-soon" onclick="setFilter('due_soon', this)">⚠️ Due Soon ({{ instr_soon|length
+      }})</button>
+    <button class="filter-tab tab-overdue" onclick="setFilter('overdue', this)">🔴 Overdue ({{ instr_ov|length
+      }})</button>
     {% if instr_nc|length > 0 %}
-    <button class="filter-tab tab-nocert" onclick="setFilter('no_cert', this)">⚪ No Cert ({{ instr_nc|length }})</button>
+    <button class="filter-tab tab-nocert" onclick="setFilter('no_cert', this)">⚪ No Cert ({{ instr_nc|length
+      }})</button>
     {% endif %}
   </div>
 
@@ -280,41 +480,45 @@
       <thead>
         <tr>
           <th style="width:36px;color:var(--muted);font-size:11px;"></th>
-          <th onclick="sortTable(1)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Asset No. <span class="sort-icon"></span></th>
-          <th onclick="sortTable(2)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Model <span class="sort-icon"></span></th>
-          <th onclick="sortTable(3)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Serial No. <span class="sort-icon"></span></th>
-          <th onclick="sortTable(4)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Location <span class="sort-icon"></span></th>
-          <th onclick="sortTable(5)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Due Date <span class="sort-icon"></span></th>
+          <th onclick="sortTable(1)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Asset No. <span
+              class="sort-icon"></span></th>
+          <th onclick="sortTable(2)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Model <span
+              class="sort-icon"></span></th>
+          <th onclick="sortTable(3)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Serial No.
+            <span class="sort-icon"></span></th>
+          <th onclick="sortTable(4)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Location <span
+              class="sort-icon"></span></th>
+          <th onclick="sortTable(5)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Due Date <span
+              class="sort-icon"></span></th>
           <th style="color:var(--muted);font-size:11px;text-transform:uppercase;">Certs</th>
         </tr>
       </thead>
       <tbody id="instrBody">
         {% for i in instruments %}
         {% if not i.latest_due_date %}
-          {% set s = 'no_cert' %}{% set dot = 'dot-grey' %}
+        {% set s = 'no_cert' %}{% set dot = 'dot-grey' %}
         {% else %}
-          {% set s = cert_status(i.latest_due_date) %}
-          {% set dot = 'dot-green' if s == 'calibrated' else ('dot-amber' if s == 'due_soon' else 'dot-red') %}
+        {% set s = cert_status(i.latest_due_date) %}
+        {% set dot = 'dot-green' if s == 'calibrated' else ('dot-amber' if s == 'due_soon' else 'dot-red') %}
         {% endif %}
         <tr data-status="{{ s }}"
-            data-search="{{ (i.asset_number or '') ~ ' ' ~ (i.serial_number or '') ~ ' ' ~ (i.model or '') ~ ' ' ~ (i.location or '') | lower }}">
-          <td style="text-align:center;"><span class="status-dot {{ dot }}" title="{{ s|replace('_',' ')|title }}"></span></td>
+          data-search="{{ (i.asset_number or '') ~ ' ' ~ (i.serial_number or '') ~ ' ' ~ (i.model or '') ~ ' ' ~ (i.location or '') | lower }}">
+          <td style="text-align:center;"><span class="status-dot {{ dot }}"
+              title="{{ s|replace('_',' ')|title }}"></span></td>
           <td><span class="data-text">{{ i.asset_number or i.instrument_name or '—' }}</span></td>
           <td><span class="data-muted">{{ i.model or '—' }}</span></td>
           <td><span class="data-code">{{ i.serial_number }}</span></td>
           <td><span class="data-muted">{{ i.location or '—' }}</span></td>
           <td>
             {% if i.latest_due_date %}
-              <span class="data-muted">{{ i.latest_due_date|dateformat }}</span>
-              {% set days = (i.latest_due_date - today).days %}
-              {% if days < 0 %}
-                <span class="days-chip chip-overdue">{{ days|abs }}d over</span>
-              {% elif days <= 30 %}
-                <span class="days-chip chip-soon">{{ days }}d left</span>
-              {% endif %}
-            {% else %}
-              <span style="color:var(--muted);font-size:12px;">No cert</span>
-            {% endif %}
+            <span class="data-muted">{{ i.latest_due_date|dateformat }}</span>
+            {% set days = (i.latest_due_date - today).days %}
+            {% if days < 0 %} <span class="days-chip chip-overdue">{{ days|abs }}d over</span>
+              {% elif days <= 30 %} <span class="days-chip chip-soon">{{ days }}d left</span>
+                {% endif %}
+                {% else %}
+                <span style="color:var(--muted);font-size:12px;">No cert</span>
+                {% endif %}
           </td>
           <td><span class="badge-pill badge-calibrated" style="font-size:11px;">{{ i.cert_count }}</span></td>
         </tr>
@@ -323,7 +527,8 @@
     </table>
   </div>
   <div id="noInstrMsg" style="display:none;text-align:center;padding:30px;color:var(--muted);">
-    <i class="bi bi-funnel" style="font-size:28px;display:block;margin-bottom:8px;"></i>No instruments match the current filter.
+    <i class="bi bi-funnel" style="font-size:28px;display:block;margin-bottom:8px;"></i>No instruments match the current
+    filter.
   </div>
 
   <!-- Pagination -->
@@ -339,136 +544,136 @@
 
 {% block extra_js %}
 <script>
-// =====================================================
-// INSTRUMENT TABLE: filter, sort, paginate
-// =====================================================
-const PAGE_SIZE = 50;
-let currentPage = 1;
-let currentFilter = 'all';
-let sortCol = -1, sortDir = 1;
+  // =====================================================
+  // INSTRUMENT TABLE: filter, sort, paginate
+  // =====================================================
+  const PAGE_SIZE = 50;
+  let currentPage = 1;
+  let currentFilter = 'all';
+  let sortCol = -1, sortDir = 1;
 
-function getRows() {
-  return Array.from(document.querySelectorAll('#instrBody tr'));
-}
-
-function visibleRows() {
-  const search = (document.getElementById('instrSearch')?.value || '').toLowerCase().trim();
-  return getRows().filter(row => {
-    const statusMatch = currentFilter === 'all' || row.dataset.status === currentFilter;
-    const searchMatch = !search || (row.dataset.search || '').includes(search);
-    return statusMatch && searchMatch;
-  });
-}
-
-function renderTable() {
-  const rows = visibleRows();
-  const total = rows.length;
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  if (currentPage > totalPages) currentPage = totalPages;
-
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-
-  getRows().forEach(r => r.style.display = 'none');
-  rows.forEach((r, i) => {
-    r.style.display = (i >= start && i < end) ? '' : 'none';
-  });
-
-  const noMsg = document.getElementById('noInstrMsg');
-  const tbl   = document.getElementById('instrTable');
-  if (noMsg) noMsg.style.display = (total === 0) ? '' : 'none';
-  if (tbl)   tbl.style.display   = (total > 0)  ? '' : 'none';
-
-  const pagerInfo = document.getElementById('pagerInfo');
-  if (pagerInfo) pagerInfo.textContent = total > 0
-    ? `Showing ${start+1}–${Math.min(end, total)} of ${total}`
-    : 'No results';
-
-  const pn = document.getElementById('pageNums');
-  if (pn) {
-    pn.innerHTML = '';
-    const maxBtns = 7;
-    let startPage = Math.max(1, currentPage - Math.floor(maxBtns/2));
-    let endPage = Math.min(totalPages, startPage + maxBtns - 1);
-    if (endPage - startPage < maxBtns - 1) startPage = Math.max(1, endPage - maxBtns + 1);
-    for (let p = startPage; p <= endPage; p++) {
-      const btn = document.createElement('button');
-      btn.className = 'pager-btn' + (p === currentPage ? ' active' : '');
-      btn.textContent = p;
-      btn.onclick = () => { currentPage = p; renderTable(); };
-      pn.appendChild(btn);
-    }
+  function getRows() {
+    return Array.from(document.querySelectorAll('#instrBody tr'));
   }
 
-  const prevBtn = document.getElementById('prevBtn');
-  const nextBtn = document.getElementById('nextBtn');
-  const pager   = document.getElementById('pager');
-  if (prevBtn) prevBtn.disabled = currentPage <= 1;
-  if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
-  if (pager)   pager.style.display = (total > PAGE_SIZE || total > 0) ? 'flex' : 'none';
-}
+  function visibleRows() {
+    const search = (document.getElementById('instrSearch')?.value || '').toLowerCase().trim();
+    return getRows().filter(row => {
+      const statusMatch = currentFilter === 'all' || row.dataset.status === currentFilter;
+      const searchMatch = !search || (row.dataset.search || '').includes(search);
+      return statusMatch && searchMatch;
+    });
+  }
 
-function setFilter(f, btn) {
-  currentFilter = f;
-  currentPage = 1;
-  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTable();
-}
+  function renderTable() {
+    const rows = visibleRows();
+    const total = rows.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (currentPage > totalPages) currentPage = totalPages;
 
-function filterInstruments() { currentPage = 1; renderTable(); }
-function changePage(dir) { currentPage += dir; renderTable(); }
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
 
-function sortTable(col) {
-  if (sortCol === col) sortDir = -sortDir;
-  else { sortCol = col; sortDir = 1; }
-  document.querySelectorAll('.instr-table th').forEach((th, i) => {
-    th.classList.remove('sort-asc', 'sort-desc');
-    if (i === col) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
-  });
-  const tbody = document.getElementById('instrBody');
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  rows.sort((a, b) => {
-    const av = a.cells[col]?.textContent.trim() || '';
-    const bv = b.cells[col]?.textContent.trim() || '';
-    return av.localeCompare(bv, undefined, {numeric:true}) * sortDir;
-  });
-  rows.forEach(r => tbody.appendChild(r));
-  renderTable();
-}
+    getRows().forEach(r => r.style.display = 'none');
+    rows.forEach((r, i) => {
+      r.style.display = (i >= start && i < end) ? '' : 'none';
+    });
 
-// =====================================================
-// CERT TABLE: status filter
-// =====================================================
-function filterCerts() {
-  const f = document.getElementById('certStatusFilter').value;
-  document.querySelectorAll('#certTable tbody tr').forEach(row => {
-    row.style.display = (f === 'all' || row.dataset.certStatus === f) ? '' : 'none';
-  });
-}
+    const noMsg = document.getElementById('noInstrMsg');
+    const tbl = document.getElementById('instrTable');
+    if (noMsg) noMsg.style.display = (total === 0) ? '' : 'none';
+    if (tbl) tbl.style.display = (total > 0) ? '' : 'none';
 
-// =====================================================
-// Hash-based scroll: if URL has #instruments, scroll there
-// =====================================================
-document.addEventListener('DOMContentLoaded', () => {
-  renderTable();
-  // Highlight sidebar "My Instruments" link when on that section
-  const instrLink = document.getElementById('instrSideLink');
-  if (instrLink) {
-    instrLink.addEventListener('click', () => {
+    const pagerInfo = document.getElementById('pagerInfo');
+    if (pagerInfo) pagerInfo.textContent = total > 0
+      ? `Showing ${start + 1}–${Math.min(end, total)} of ${total}`
+      : 'No results';
+
+    const pn = document.getElementById('pageNums');
+    if (pn) {
+      pn.innerHTML = '';
+      const maxBtns = 7;
+      let startPage = Math.max(1, currentPage - Math.floor(maxBtns / 2));
+      let endPage = Math.min(totalPages, startPage + maxBtns - 1);
+      if (endPage - startPage < maxBtns - 1) startPage = Math.max(1, endPage - maxBtns + 1);
+      for (let p = startPage; p <= endPage; p++) {
+        const btn = document.createElement('button');
+        btn.className = 'pager-btn' + (p === currentPage ? ' active' : '');
+        btn.textContent = p;
+        btn.onclick = () => { currentPage = p; renderTable(); };
+        pn.appendChild(btn);
+      }
+    }
+
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const pager = document.getElementById('pager');
+    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+    if (nextBtn) nextBtn.disabled = currentPage >= totalPages;
+    if (pager) pager.style.display = (total > PAGE_SIZE || total > 0) ? 'flex' : 'none';
+  }
+
+  function setFilter(f, btn) {
+    currentFilter = f;
+    currentPage = 1;
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTable();
+  }
+
+  function filterInstruments() { currentPage = 1; renderTable(); }
+  function changePage(dir) { currentPage += dir; renderTable(); }
+
+  function sortTable(col) {
+    if (sortCol === col) sortDir = -sortDir;
+    else { sortCol = col; sortDir = 1; }
+    document.querySelectorAll('.instr-table th').forEach((th, i) => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (i === col) th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    });
+    const tbody = document.getElementById('instrBody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a, b) => {
+      const av = a.cells[col]?.textContent.trim() || '';
+      const bv = b.cells[col]?.textContent.trim() || '';
+      return av.localeCompare(bv, undefined, { numeric: true }) * sortDir;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+    renderTable();
+  }
+
+  // =====================================================
+  // CERT TABLE: status filter
+  // =====================================================
+  function filterCerts() {
+    const f = document.getElementById('certStatusFilter').value;
+    document.querySelectorAll('#certTable tbody tr').forEach(row => {
+      row.style.display = (f === 'all' || row.dataset.certStatus === f) ? '' : 'none';
+    });
+  }
+
+  // =====================================================
+  // Hash-based scroll: if URL has #instruments, scroll there
+  // =====================================================
+  document.addEventListener('DOMContentLoaded', () => {
+    renderTable();
+    // Highlight sidebar "My Instruments" link when on that section
+    const instrLink = document.getElementById('instrSideLink');
+    if (instrLink) {
+      instrLink.addEventListener('click', () => {
+        setTimeout(() => {
+          const el = document.getElementById('instruments');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 50);
+      });
+    }
+    // Auto-scroll if hash is #instruments on load
+    if (window.location.hash === '#instruments') {
       setTimeout(() => {
         const el = document.getElementById('instruments');
         if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 50);
-    });
-  }
-  // Auto-scroll if hash is #instruments on load
-  if (window.location.hash === '#instruments') {
-    setTimeout(() => {
-      const el = document.getElementById('instruments');
-      if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  }
-});
+      }, 100);
+    }
+  });
 </script>
 {% endblock %}
