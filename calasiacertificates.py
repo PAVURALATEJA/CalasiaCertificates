@@ -213,7 +213,9 @@ def create_tables():
             id SERIAL PRIMARY KEY,
             certificate_id INTEGER,
             user_id INTEGER,
+            customer_id INTEGER,
             ip_address VARCHAR(50),
+            user_agent VARCHAR(500),
             downloaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """)
@@ -232,6 +234,14 @@ def create_tables():
         cur.execute("""
         ALTER TABLE certificate_downloads
         ADD COLUMN IF NOT EXISTS ip_address VARCHAR(50)
+        """)
+        cur.execute("""
+        ALTER TABLE certificate_downloads
+        ADD COLUMN IF NOT EXISTS customer_id INTEGER
+        """)
+        cur.execute("""
+        ALTER TABLE certificate_downloads
+        ADD COLUMN IF NOT EXISTS user_agent VARCHAR(500)
         """)
 
         conn.commit()
@@ -1710,11 +1720,14 @@ def customer_open_certificate(cert_id):
     # Log the download
     ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     ua = request.headers.get('User-Agent', '')[:500]
-    db_execute("""
-        INSERT INTO certificate_downloads
-          (certificate_id, user_id, customer_id, ip_address, user_agent)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (cert_id, current_user.id, current_user.customer_id, ip, ua))
+    try:
+        db_execute("""
+            INSERT INTO certificate_downloads
+              (certificate_id, user_id, customer_id, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (cert_id, current_user.id, current_user.customer_id, ip, ua))
+    except Exception as _log_err:
+        print(f'[PDF] Download log failed (non-fatal): {_log_err}')
 
     # --- Try Dropbox temporary link (no sharing scopes needed) ---
     dropbox_path = cert.get('dropbox_file_path')
