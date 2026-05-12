@@ -224,7 +224,8 @@
   {% elif current_user.role == 'customer' %}
   <div class="sidebar-role">Customer Portal</div>
   <ul class="sidebar-nav">
-    <li><a href="{{ url_for('customer_dashboard') }}" class="{{ 'active' if request.endpoint=='customer_dashboard' }}"><i class="bi bi-file-earmark-medical"></i> My Certificates</a></li>
+    <li><a href="{{ url_for('customer_dashboard') }}#certs" class="{{ 'active' if request.endpoint=='customer_dashboard' }}"><i class="bi bi-file-earmark-medical"></i> My Certificates</a></li>
+    <li><a href="{{ url_for('customer_dashboard') }}#instruments" id="instrSideLink"><i class="bi bi-cpu"></i> My Instruments</a></li>
     <li><a href="{{ url_for('customer_change_password') }}" class="{{ 'active' if request.endpoint=='customer_change_password' }}" style="color:#f59e0b;"><i class="bi bi-shield-lock" style="color:#f59e0b;"></i> Change Password</a></li>
   </ul>
   {% endif %}
