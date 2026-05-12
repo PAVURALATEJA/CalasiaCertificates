@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}My Certificates — Cal-Asia{% endblock %}
+{% block title %}Cal Certificates — Cal-Asia{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -362,7 +362,7 @@
       <thead>
         <tr>
           <th>Certificate No.</th>
-          <th>Asset No.</th>
+          <th>Description</th>
           <th>Serial No.</th>
           <th>Model</th>
           <th>Cal. Date</th>
@@ -440,7 +440,7 @@
   <!-- Header row -->
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <h6 style="font-weight:700;margin:0;font-size:14px;">
-      <i class="bi bi-cpu me-2" style="color:#22d3ee;"></i>My Instruments
+      <i class="bi bi-cpu me-2" style="color:#22d3ee;"></i>Cal Asset List
       <span style="font-size:12px;font-weight:400;color:var(--muted);margin-left:6px;">{{ instr_total }} total</span>
     </h6>
     <input id="instrSearch" type="text" placeholder="&#128269; Filter instruments…" oninput="filterInstruments()">
@@ -480,7 +480,7 @@
       <thead>
         <tr>
           <th style="width:36px;color:var(--muted);font-size:11px;"></th>
-          <th onclick="sortTable(1)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Asset No. <span
+          <th onclick="sortTable(1)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Description <span
               class="sort-icon"></span></th>
           <th onclick="sortTable(2)" style="color:var(--muted);font-size:11px;text-transform:uppercase;">Model <span
               class="sort-icon"></span></th>
